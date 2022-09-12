@@ -1,7 +1,7 @@
 ---
-date: "2019-04-19T21:37:58+05:30"
+date: "2020-09012"
 title: About
 type: page
 ---
 
-This is some static page where you can write about yourself.
+Hi! My name is Kento Yamada, and I am a junior at Harvard College studying Government. I am writing this blog to predict the outcomes of the 2022 Congressional midterm elections as part of a course titled Government 1347: Election Analytics.
