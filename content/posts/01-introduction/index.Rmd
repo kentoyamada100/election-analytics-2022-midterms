@@ -42,7 +42,7 @@ midterms_2018_by_state <- vote_share %>%
   select(-State)
 ```
 
-```{r 2018 vote share margin map, include = FALSE}
+```{r 2018 vote share margin map, echo = FALSE}
 plot_usmap(data = midterms_2018_by_state, regions = "states", 
            values = "margin", labels = TRUE, size = 0.2) +
   scale_fill_gradient2(
@@ -80,7 +80,7 @@ midterms_2014_by_state <- vote_share %>%
   select(-State)
 ```
 
-```{r 2014 vote share margin map, include = FALSE}
+```{r 2014 vote share margin map, echo = FALSE}
 plot_usmap(data = midterms_2014_by_state, regions = "states", 
            values = "margin", labels = TRUE, size = 0.2) +
   scale_fill_gradient2(
