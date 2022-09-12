@@ -1,40 +1,33 @@
 baseURL: http://example.org/
 languageCode: en-us
-title: Ink
+title: "Election Analytics: 2022 Congressional Midterm Elections"
 theme: hugo-ink
 paginate: 5
-copyright: © Copyright notice
+copyright: © Kento Yamada
 pygmentsstyle: vs
 pygmentscodefences: yes
 pygmentscodefencesguesssyntax: yes
 googleAnalytics: UA-123-45
 disqusShortname: ink-demo
 params:
-  avatar: https://image.freepik.com/free-vector/young-man-head-with-beard-avatar-character_24877-36786.jpg
   disableDisqusTypes: page
   featherIconsCDN: yes
   mode: auto
   social:
     - icon: github
       name: Github
-      url: https://github.com/knadh/hugo-ink
-    - icon: rss
-      name: RSS
-      url: /index.xml
-  subtitle: Crisp, minimal personal [blog theme for Hugo](https://github.com/knadh/hugo-ink)
+      url: https://github.com/kentoyamada100/election-analytics-2022-midterms
+  subtitle: "Created by Kento Yamada (Harvard College) as part of Gov 1347: Election Analytics"
 menu:
   main:
     - name: Home
       url: /
       weight: 1
-    - name: All posts
+    - name: Posts
       url: /posts
       weight: 2
     - name: About
       url: /about
       weight: 3
-    - name: Tags
-      url: /tags
-      weight: 4
 taxonomies:
   tag: tags
