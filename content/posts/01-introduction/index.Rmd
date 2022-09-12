@@ -1,7 +1,7 @@
 ---
 title: "01-Introduction"
 author: "Kento Yamada"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+date: "`r format(Sys.time())`"
 categories: ["R"]
 ---
 
