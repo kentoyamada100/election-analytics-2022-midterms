@@ -1,13 +1,37 @@
 ---
 title: "01-Introduction"
 author: "Kento Yamada"
-date: "2022-09-12 02:43:26"
+date: "2022-09-12 04:08:40"
 categories: ["R"]
 ---
 
 
 
-<div id="r-markdown" class="section level1">
-<h1>R Markdown</h1>
-<p>This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <a href="http://rmarkdown.rstudio.com" class="uri">http://rmarkdown.rstudio.com</a>.</p>
-</div>
+<pre class="r"><code>plot_usmap(data = midterms_2018_by_state, regions = &quot;states&quot;, 
+           values = &quot;margin&quot;, labels = TRUE, size = 0.2) +
+  scale_fill_gradient2(
+    high = &quot;red&quot;,
+    mid = &quot;white&quot;,
+    low = &quot;blue&quot;,
+    name = &quot;Vote Share Margin&quot;
+  ) +
+  labs(title = &quot;Figure 1: Vote Share Margin by State: 2018&quot;) +
+  theme(legend.position = &quot;right&quot;,
+        legend.title = element_text(size = 7)) </code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/2018%20vote%20share%20margin%20map-1.png" width="672" /></p>
+<ul>
+<li>MA, CA, etc: extremely blue</li>
+<li>vs Moderately red</li>
+</ul>
+<pre class="r"><code>plot_usmap(data = midterms_2014_by_state, regions = &quot;states&quot;, 
+           values = &quot;margin&quot;, labels = TRUE, size = 0.2) +
+  scale_fill_gradient2(
+    high = &quot;red&quot;,
+    mid = &quot;white&quot;,
+    low = &quot;blue&quot;,
+    name = &quot;Vote Share Margin&quot;
+  ) +
+  labs(title = &quot;Figure 1: Vote Share Margin by State: 2014&quot;) +
+  theme(legend.position = &quot;right&quot;,
+        legend.title = element_text(size = 7)) </code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/2014%20vote%20share%20margin%20map-1.png" width="672" /></p>

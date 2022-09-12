@@ -7,10 +7,89 @@ categories: ["R"]
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
 ```
 
-# R Markdown
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(usmap)
+```
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+```{r load data, include = FALSE}
+vote_share <- read_csv("data/house_party_vote_share_by_district_1948-2020.csv")
+```
 
 
+```{r 2018 vote share margin, include = FALSE}
+midterms_2018_by_state <- vote_share %>%
+  filter(raceYear == 2018) %>%
+  group_by(State) %>%
+  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes), total_T = sum(ThirdVotes)) %>%
+  
+  # Replace NA's with 0
+  mutate(total_T = ifelse(is.na(total_T), 0, total_T)) %>%
+  
+  # Calculate vote share in each state
+  mutate(share_R = total_R / (total_R + total_D + total_T),
+         share_D = total_D / (total_R + total_D + total_T)) %>%
+  
+  # Calculate vote margin
+  mutate(margin = share_R - share_D)  %>%
+  
+  # State -> state
+  mutate(state = State) %>%
+  select(-State)
+```
+
+```{r 2018 vote share margin map}
+plot_usmap(data = midterms_2018_by_state, regions = "states", 
+           values = "margin", labels = TRUE, size = 0.2) +
+  scale_fill_gradient2(
+    high = "red",
+    mid = "white",
+    low = "blue",
+    name = "Vote Share Margin"
+  ) +
+  labs(title = "Figure 1: Vote Share Margin by State: 2018") +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 7)) 
+``` 
+
+* MA, CA, etc: extremely blue
+* vs Moderately red
+
+```{r 2014 vote share margin, include = FALSE}
+midterms_2014_by_state <- vote_share %>%
+  filter(raceYear == 2014) %>%
+  group_by(State) %>%
+  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes), total_T = sum(ThirdVotes)) %>%
+  
+  # Replace NA's with 0
+  mutate(total_T = ifelse(is.na(total_T), 0, total_T)) %>%
+  
+  # Calculate vote share in each state
+  mutate(share_R = total_R / (total_R + total_D + total_T),
+         share_D = total_D / (total_R + total_D + total_T)) %>%
+  
+  # Calculate vote margin
+  mutate(margin = share_R - share_D)  %>%
+  
+  # State -> state
+  mutate(state = State) %>%
+  select(-State)
+```
+
+```{r 2014 vote share margin map}
+plot_usmap(data = midterms_2014_by_state, regions = "states", 
+           values = "margin", labels = TRUE, size = 0.2) +
+  scale_fill_gradient2(
+    high = "red",
+    mid = "white",
+    low = "blue",
+    name = "Vote Share Margin"
+  ) +
+  labs(title = "Figure 1: Vote Share Margin by State: 2014") +
+  theme(legend.position = "right",
+        legend.title = element_text(size = 7)) 
+``` 
