@@ -7,3 +7,12 @@
 *.Rprofile
 
 .DS_store
+
+/public/
+/resources/_gen/
+/layouts
+/archetypes
+/themes
+
+netlify.toml
+index.Rmd
