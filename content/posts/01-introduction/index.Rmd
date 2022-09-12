@@ -17,7 +17,7 @@ library(usmap)
 
 
 ```{r load data, include = FALSE}
-vote_share <- read_csv("data/house_party_vote_share_by_district_1948-2020.csv")
+vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
 ```
 
 
@@ -42,7 +42,7 @@ midterms_2018_by_state <- vote_share %>%
   select(-State)
 ```
 
-```{r 2018 vote share margin map}
+```{r 2018 vote share margin map, include = FALSE}
 plot_usmap(data = midterms_2018_by_state, regions = "states", 
            values = "margin", labels = TRUE, size = 0.2) +
   scale_fill_gradient2(
@@ -80,7 +80,7 @@ midterms_2014_by_state <- vote_share %>%
   select(-State)
 ```
 
-```{r 2014 vote share margin map}
+```{r 2014 vote share margin map, include = FALSE}
 plot_usmap(data = midterms_2014_by_state, regions = "states", 
            values = "margin", labels = TRUE, size = 0.2) +
   scale_fill_gradient2(
