@@ -1,6 +1,6 @@
 baseURL: http://example.org/
 languageCode: en-us
-title: "Election Analytics: 2022 Congressional Midterm Elections"
+title: "2022 Congressional Midterm Elections Forecast"
 theme: hugo-ink
 paginate: 5
 copyright: © Kento Yamada
@@ -17,7 +17,7 @@ params:
     - icon: github
       name: Github
       url: https://github.com/kentoyamada100/election-analytics-2022-midterms
-  subtitle: "Created by Kento Yamada (Harvard College) as part of Gov 1347: Election Analytics"
+  subtitle: "Kento Yamada (Harvard College) | Gov 1347: Election Analytics"
 menu:
   main:
     - name: Home

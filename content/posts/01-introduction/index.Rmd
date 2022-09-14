@@ -59,6 +59,10 @@ plot_usmap(data = midterms_2018_by_state, regions = "states",
 * MA, CA, etc: extremely blue
 * vs Moderately red
 
+
+* Does not necessarily translate to seat share
+* Republican's structural advantage (Bafumi et al, 2018)
+
 ```{r 2014 vote share margin, include = FALSE}
 midterms_2014_by_state <- vote_share %>%
   filter(raceYear == 2014) %>%
