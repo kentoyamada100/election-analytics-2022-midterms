@@ -15,7 +15,21 @@ categories: ["R"]
 <li><p>Republican’s structural advantage (Bafumi et al, 2018)</p></li>
 </ul>
 <p><img src="{{< blogdown/postref >}}index_files/figure-html/2014%20vote%20share%20margin%20map-1.png" width="672" /></p>
-<pre class="r"><code>cd114 &lt;- get_congress_map(114)</code></pre>
+<pre class="r"><code>ggplot() +
+  
+  geom_sf(data = cd114_nc_vote_share, aes(fill = margin_R)) +
+  
+  scale_fill_gradient2(
+    high = &quot;red&quot;,
+    mid = &quot;white&quot;,
+    low = &quot;blue&quot;,
+    name = &quot;Vote Share Margin&quot;
+  ) +
+  
+ theme(axis.line = element_blank(), axis.text = element_blank(),
+       axis.ticks = element_blank(), axis.title = element_blank(),
+       panel.background = element_blank())</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
 <div id="references" class="section level1">
 <h1>References</h1>
 </div>

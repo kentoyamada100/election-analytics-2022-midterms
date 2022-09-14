@@ -108,7 +108,7 @@ plot_usmap(data = midterms_2014_by_state, regions = "states",
 ``` 
 
 
-```{r download shapefile for 114th Congress (2014 election), eval = FALSE}
+```{r download shapefile for 114th Congress (2014 election), eval = FALSE, include = FALSE}
 cd114 <- get_congress_map(114)
 ```
 
