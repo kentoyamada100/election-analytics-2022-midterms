@@ -18,7 +18,7 @@ library(usmap)
 
 
 ```{r load data, include = FALSE}
-vote_share <- read_csv("data/house_party_vote_share_by_district_1948-2020.csv")
+vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
 ```
 
 
