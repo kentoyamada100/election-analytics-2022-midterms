@@ -8,9 +8,7 @@ pygmentsstyle: vs
 pygmentscodefences: yes
 pygmentscodefencesguesssyntax: yes
 googleAnalytics: UA-123-45
-disqusShortname: ink-demo
 params:
-  disableDisqusTypes: page
   featherIconsCDN: yes
   mode: auto
   social:
