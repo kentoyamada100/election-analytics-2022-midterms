@@ -5,38 +5,41 @@ date: "2022-09-14"
 categories: ["R"]
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE)
 knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
 ```
 
+```{r pull functions from "R" folder, include = FALSE}
+setwd("R")
+files.sources = list.files()
+sapply(files.sources, source)
+setwd("..")
+```
+
 ```{r load packages, include = FALSE}
 library(tidyverse)
 library(usmap)
+library(sf)
 ```
-
 
 ```{r load data, include = FALSE}
 vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
 ```
 
 
-```{r 2018 vote share margin, include = FALSE}
+```{r 2018 two-party vote share margin by state, include = FALSE}
 midterms_2018_by_state <- vote_share %>%
   filter(raceYear == 2018) %>%
   group_by(State) %>%
-  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes), total_T = sum(ThirdVotes)) %>%
+  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes)) %>%
   
-  # Replace NA's with 0
-  mutate(total_T = ifelse(is.na(total_T), 0, total_T)) %>%
-  
-  # Calculate vote share in each state
-  mutate(share_R = total_R / (total_R + total_D + total_T),
-         share_D = total_D / (total_R + total_D + total_T)) %>%
+  # Calculate two-party vote share in each state
+  mutate(share_R = total_R / (total_R + total_D),
+         share_D = total_D / (total_R + total_D)) %>%
   
   # Calculate vote margin
-  mutate(margin = share_R - share_D)  %>%
+  mutate(margin_R = share_R - share_D)  %>%
   
   # State -> state
   mutate(state = State) %>%
@@ -45,7 +48,7 @@ midterms_2018_by_state <- vote_share %>%
 
 ```{r 2018 vote share margin map, echo = FALSE}
 plot_usmap(data = midterms_2018_by_state, regions = "states", 
-           values = "margin", labels = TRUE, size = 0.2) +
+           values = "margin_R", labels = TRUE, size = 0.2) +
   
   scale_fill_gradient2(
     high = "red",
@@ -68,21 +71,18 @@ plot_usmap(data = midterms_2018_by_state, regions = "states",
 * Does not necessarily translate to seat share
 * Republican's structural advantage (Bafumi et al, 2018)
 
-```{r 2014 vote share margin, include = FALSE}
+```{r 2014 two-party vote share margin by state, include = FALSE}
 midterms_2014_by_state <- vote_share %>%
   filter(raceYear == 2014) %>%
   group_by(State) %>%
-  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes), total_T = sum(ThirdVotes)) %>%
-  
-  # Replace NA's with 0
-  mutate(total_T = ifelse(is.na(total_T), 0, total_T)) %>%
+  summarize(total_R = sum(RepVotes), total_D = sum(DemVotes)) %>%
   
   # Calculate vote share in each state
-  mutate(share_R = total_R / (total_R + total_D + total_T),
-         share_D = total_D / (total_R + total_D + total_T)) %>%
+  mutate(share_R = total_R / (total_R + total_D),
+         share_D = total_D / (total_R + total_D)) %>%
   
-  # Calculate vote margin
-  mutate(margin = share_R - share_D)  %>%
+  # Calculate vote share margin
+  mutate(margin_R = share_R - share_D)  %>%
   
   # State -> state
   mutate(state = State) %>%
@@ -91,7 +91,7 @@ midterms_2014_by_state <- vote_share %>%
 
 ```{r 2014 vote share margin map, echo = FALSE}
 plot_usmap(data = midterms_2014_by_state, regions = "states", 
-           values = "margin", labels = TRUE, size = 0.2) +
+           values = "margin_R", labels = TRUE, size = 0.2) +
   
   scale_fill_gradient2(
     high = "red",
@@ -106,3 +106,59 @@ plot_usmap(data = midterms_2014_by_state, regions = "states",
   theme(legend.position = "right",
         legend.title = element_text(size = 7)) 
 ``` 
+
+
+```{r download shapefile for 114th Congress (2014 election), eval = FALSE}
+cd114 <- get_congress_map(114)
+```
+
+```{r read shapefile, include = FALSE}
+cd114_nc <- st_read("analysis_data/districtShapes/districts114.shp") %>%
+  
+  # Filter out data for North Carolina
+  filter(STATENAME == "North Carolina") %>%
+  
+  # Select column, rename, and convert district number to numeric
+  select(DISTRICT) %>%
+  rename(district_num = DISTRICT) %>%
+  mutate(district_num = as.numeric(district_num))
+```
+
+```{r 2014 two-party vote share margin by CD, include = FALSE}
+midterms_2014_nc <- vote_share %>%
+  
+  # Filter out data for North Carolina
+  filter(raceYear == 2014, State == "North Carolina") %>%
+  select(district_num, RepVotesMajorPercent, DemVotesMajorPercent) %>%
+  
+  # Calculate vote share margin
+  mutate(margin_R = RepVotesMajorPercent - DemVotesMajorPercent)
+```
+
+```{r merge shapefile with election results data, include = FALSE}
+cd114_nc_vote_share <- cd114_nc %>% left_join(midterms_2014_nc, by = "district_num")
+```
+
+```{r}
+ggplot() +
+  
+  geom_sf(data = cd114_nc_vote_share, aes(fill = margin_R)) +
+  
+  scale_fill_gradient2(
+    high = "red",
+    mid = "white",
+    low = "blue",
+    name = "Vote Share Margin"
+  ) +
+  
+ theme(axis.line = element_blank(), axis.text = element_blank(),
+       axis.ticks = element_blank(), axis.title = element_blank(),
+       panel.background = element_blank())
+```
+
+
+
+# References
+
+# Data Sources
+Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2013). *Digital Boundary Definitions of United States Congressional Districts, 1789-2012.* [Data file and code book]. Retrieved September 14, 2022 from https://cdmaps.polisci.ucla.edu.
