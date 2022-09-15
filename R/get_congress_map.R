@@ -5,7 +5,8 @@
 
 get_congress_map <- function(cong) {
   
-  # Temporary file
+  # Temporary directory/file
+  tmp_dir <- tempdir()
   tmp_file <- tempfile()
   
   # Convert "cong" to 3 digits if necessary
@@ -18,11 +19,16 @@ get_congress_map <- function(cong) {
   
   
   # unzip downloaded file
-  unzip(zipfile = tmp_file, exdir = "analysis_data/")
+  unzip(zipfile = tmp_file, exdir = tmp_dir)
   
   # read file
-  shape <- st_read(paste("analysis_data/districtShapes/districts", cong, ".shp", 
+  shape <- st_read(paste(tmp_dir, "/districtShapes/districts", cong, ".shp", 
                          sep = ""))
+  
+  # save file
+  write_rds(shape, paste("analysis_data/districts", cong, ".rds", 
+                         sep = ""),
+            compress = "xz")
   
   return(shape)
 }
