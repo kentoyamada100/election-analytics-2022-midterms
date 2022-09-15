@@ -30,9 +30,9 @@ As I prepare to predict the upcoming election, I would like to start my blog ser
 
 ## Vote Share Margin by State: 2018
 
-It is well known that the president’s party tends to lose seats in the House in a midterm election. In fact, the president’s party lost House seats in 26 out of the 29 midterm elections since 1900, and the 3 exceptions, the 1934, 1998, and 2002 elections, all took place when the incumbent president was exceptionally popular (Franklin Roosevelt, Bill Clinton, and George W. Bush, respectively) (Campbell, 2018a, p. 1). Not surprisingly, in 2018, various models predicted that the Democrats would take back the House (Abramowitz, 2018; Campbell, 2018b, Lewis-Beck & Tien, 2018).
+It is well known that the president’s party tends to lose seats in the House in a midterm election. The president’s party lost House seats in 26 out of the 29 midterm elections since 1900, and the 3 exceptions, the 1934, 1998, and 2002 elections, all took place at a time when the incumbent president was exceptionally popular (Franklin Roosevelt, Bill Clinton, and George W. Bush, respectively) (Campbell, 2018a, p. 1). Not surprisingly, in 2018, various models predicted that the Democrats would take back the House (Abramowitz, 2018; Campbell, 2018b, Lewis-Beck & Tien, 2018).
 
-Indeed, Democrats won 235 seats, gaining 41 seats. Figure 1 shows the two-party vote share margin by state. Democrats won the popular vote in 25 states and had an extremely large vote share margin in traditionally blue states with large urban populations such as California, New York, and Massachusetts.
+Indeed, Democrats won 235 seats, gaining 41 seats. Figure 1 shows the two-party vote share margin by state. Democrats won the popular vote in 25 states and had an extremely large vote share margin in states with large urban populations such as California, New York, and Massachusetts.
 
 ```{r load vote share data, include = FALSE}
 vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
@@ -177,7 +177,7 @@ compare_2014_2018 %>%
 
 ### Vote Share Margin by Congressional District
 
-Of course, the vote share at the state level do not directly determine the outcomes of House elections, so Figure 3, which shows the two-party vote share margin by congressional district in the 2014 elections, may be more informative. Note that the vote share margin is 100% in some districts because some candidates were unopposed by major candidates. Even after dropping those districts, we can see that the vast majority of candidates won by a sizable margin, which suggests that that the majority of seats were safe seats. Highly competitive districts are colored in white since the vote share margin is close to 0%, but there are few of them. Another take-away is that the districts where Democrats won tended to be geographically small, which reflects the fact that Democrats tend to perform well in urban areas.
+Of course, the vote shares at the state level do not directly determine the outcomes of House elections, so Figure 3, which shows the two-party vote share margin by congressional district in the 2014 elections, may be more informative. Note that the vote share margin is 100% in some districts because some candidates were unopposed by major candidates. Even after dropping those districts, we can see that the vast majority of candidates won by a sizable margin, which suggests that that the majority of seats were safe seats. Highly competitive districts are colored in white since the vote share margin is close to 0%, but there are few of them. Another takeaway is that the districts where Democrats won tended to be geographically small, which reflects the fact that Democrats tend to perform well in urban areas.
 
 ```{r download shapefile for 114th Congress (2014 election), eval = FALSE, include = FALSE}
 cd114 <- get_congress_map(114) 
@@ -237,7 +237,7 @@ ggplot(data = cd114_vote_share) +
 
 #### Example: North Carolina
 
-Since there is a limit to what a nation-wide map can tell us, I decided to take a closer look at a state that may give us insights about Democratic voters’ geographic distribution and its relation to redistricting. As Figure 4 shows, in the 2014 House elections, Democrats won 3 seats out of 12, winning by large margins in Districts 1, 4, and 12. Those three districts seem to have been designed to include the largest cities in the State, and they were one of the least geographically compact districts act the time (Ingraham, 2014). Indeed, in 2016, the maps were ordered to be redrawn on the grounds that they were racially gerrymandered. District 1, which encompasses the black neighborhoods of Durham, and District 12, which stretches between Charlotte and Greensboro, were both determined to have been racially gerrymandered, and the decision was upheld by the Supreme Court in 2017 (Barnes, 2017; Hurley, 2017). 
+Since there is a limit to what a nation-wide map can tell us, I decided to take a closer look at a state that may give us insights into Democratic voters’ geographic distribution and its relation to redistricting. As Figure 4 shows, in the 2014 House elections, Democrats won 3 seats out of 12, winning by large margins in Districts 1, 4, and 12. Those three districts seem to have been designed to include the largest cities in the State, and they were one of the least geographically compact districts act the time (Ingraham, 2014). Indeed, in 2016, the maps were ordered to be redrawn on the grounds that they were racially gerrymandered. District 1, which encompasses the black neighborhoods of Durham, and District 12, which stretches between Charlotte and Greensboro, were both determined to have been racially gerrymandered, and the decision was upheld by the Supreme Court in 2017 (Barnes, 2017; Hurley, 2017). 
 
 ```{r extract data for 2014 NC, include = FALSE}
 cd114_nc_vote_share <- cd114_vote_share %>%
@@ -292,9 +292,9 @@ ggplot(data = cd114_nc_vote_share) +
 
 ## Vote Share vs Seat Share: 2014
 
-As the case of North Carolina shows, how districts are drawn as well as the design of electoral institutions impact electoral outcomes. In general, the Republican Party has a structural advantage because Democrats tend to be concentrated in small areas and because many Republican-controlled state legislatures have pursued gerrymandering (Bafumi et al., 2018, p. 10).
+As the case of North Carolina shows, how districts are drawn as well as the design of electoral institutions impact electoral outcomes. In general, the Republican Party has a structural advantage in elections because Democrats tend to be concentrated in small areas and because many Republican-controlled state legislatures have pursued gerrymandering (Bafumi et al., 2018, p. 10).
 
-It goes without saying that vote share does not necessarily match into seat share. Figure 5 is an interactive plot that allows you to explore the difference between the Republican vote share and Republican seat share in the 2014 House elections. By nature, seat shares are not exactly equal to the vote share, and there is a discrepancy between the two in both blue states and red states. However, at least in 2014, Republicans won a disproportionately high seat share relative to their vote share in 35 states. In one extreme case (Michigan), Republicans won a majority of the seats (9 out of 14) despite having lost the state-wide popular vote. This analysis by no means is enough to explore the structural advantages that the parties have in different states nor is does it provide evidence of gerrymandering. Rather, the take-away here is that vote shares might not neatly translate into seat share. In the coming weeks, I hope to keep this in mind as I start building my predictive models.
+It goes without saying that seat share does not necessarily match vote share. Figure 5 is an interactive plot that allows you to explore the difference between the Republican vote share and Republican seat share in the 2014 House elections. By nature, seat shares are not exactly equal to the vote shares, and there is a discrepancy between the two in both blue states and red states. However, at least in 2014, Republicans won a disproportionately high seat share relative to their vote share in 35 states. In one extreme case (Michigan), Republicans won a majority of the seats (9 out of 14) despite having lost the state-wide popular vote. This analysis by no means is enough to explore the structural advantages that each party has in different states nor does it provide evidence of gerrymandering. Rather, the takeaway here is that vote shares might not neatly translate into seat share. In the coming weeks, I hope to keep this in mind as I start building my predictive models.
 
 ```{r 2014 vote share by State, include = FALSE}
 plot_vote_share_2014 <- 
@@ -351,8 +351,6 @@ plot_seat_share_2014 <-
         legend.title = element_text(size = 10)) 
 ```
 
-
-
 ```{r plot showing difference between seat share and vote share (with labels), echo = FALSE}
 subplot(plot_vote_share_2014,
         plot_seat_share_2014) %>%
@@ -374,11 +372,14 @@ subplot(plot_vote_share_2014,
                 ))
 ```
 
-
 ```{r merge seat share data with vote share data, include = FALSE}
 share_2014 <- left_join(vote_share_2014, seat_share_2014, by = "state") %>%
   # calculate difference between vote share and seat share
   mutate(diff_R = seat_share_R - vote_share_R)
+```
+
+```{r diff_R > 0 in how many states, eval = FALSE, include = FALSE}
+sum(share_2014$diff_R > 0)
 ```
 
 ```{r winning majority of seats without winning popular vote: R, eval = FALSE, include = FALSE}
@@ -390,9 +391,6 @@ share_2014 %>%
 share_2014 %>%
   filter(vote_share_R > 50 & seat_share_R < 50)
 ```
-
-In `r sum(share_2014$diff_R > 0)` states, Republicans gained a higher seat share relative to their vote share.
-
 
 
 ### References
