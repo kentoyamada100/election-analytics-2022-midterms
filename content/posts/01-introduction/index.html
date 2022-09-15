@@ -2,38 +2,45 @@
 title: "01-Introduction"
 author: "Kento Yamada"
 date: "2022-09-14"
-categories: ["R"]
 ---
 
 
 
-<p><img src="{{< blogdown/postref >}}index_files/figure-html/2018%20vote%20share%20margin%20map-1.png" width="672" /></p>
+<div id="vote-share-margin-2018" class="section level2">
+<h2>Vote Share Margin: 2018</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/2018%20vote%20share%20margin%20map%20with%20labels-1.png" width="672" /></p>
 <ul>
 <li><p>MA, CA, etc: extremely blue</p></li>
 <li><p>vs Moderately red</p></li>
 <li><p>Does not necessarily translate to seat share</p></li>
 <li><p>Republican’s structural advantage (Bafumi et al, 2018)</p></li>
 </ul>
-<p><img src="{{< blogdown/postref >}}index_files/figure-html/2014%20vote%20share%20margin%20map-1.png" width="672" /></p>
-<pre class="r"><code>ggplot() +
-  
-  geom_sf(data = cd114_nc_vote_share, aes(fill = margin_R)) +
-  
-  scale_fill_gradient2(
-    high = &quot;red&quot;,
-    mid = &quot;white&quot;,
-    low = &quot;blue&quot;,
-    name = &quot;Vote Share Margin&quot;
-  ) +
-  
- theme(axis.line = element_blank(), axis.text = element_blank(),
-       axis.ticks = element_blank(), axis.title = element_blank(),
-       panel.background = element_blank())</code></pre>
-<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
-<div id="references" class="section level1">
-<h1>References</h1>
 </div>
-<div id="data-sources" class="section level1">
-<h1>Data Sources</h1>
-<p>Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2013). <em>Digital Boundary Definitions of United States Congressional Districts, 1789-2012.</em> [Data file and code book]. Retrieved September 14, 2022 from <a href="https://cdmaps.polisci.ucla.edu" class="uri">https://cdmaps.polisci.ucla.edu</a>.</p>
+<div id="vote-share-margin-2014" class="section level2">
+<h2>Vote Share Margin: 2014</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/2014%20vote%20share%20margin%20map%20with%20labels-1.png" width="672" /></p>
+</div>
+<div id="midterm-elections-in-north-carolina" class="section level2">
+<h2>2014 Midterm Elections in North Carolina</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/North%20Carolina%20vote%20margin-1.png" width="672" /></p>
+</div>
+<div id="seat-share-by-party-2014" class="section level2">
+<h2>Seat Share by Party: 2014</h2>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/Republican%20seat%20share%20by%20state%20with%20labels-1.png" width="672" /></p>
+</div>
+<div id="vote-share-vs-seat-share" class="section level2">
+<h2>Vote Share vs Seat Share</h2>
+<pre class="r"><code>share_2014 &lt;- left_join(vote_share_2014, seat_share_2014, by = &quot;state&quot;) %&gt;%
+  # calculate difference between vote share and seat share
+  mutate(diff_R = seat_share_R - vote_share_R)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20showing%20difference%20between%20seat%20share%20and%20vote%20share%20(with%20labels)-1.png" width="672" /></p>
+<p>In 32 states, Republicans gained a higher seat share relative to their vote share.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+</div>
+<div id="data-sources" class="section level2">
+<h2>Data Sources</h2>
+<p>Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2013). <em>Digital Boundary Definitions of United States Congressional Districts, 1789-2012</em> [Data file and code book]. <a href="https://cdmaps.polisci.ucla.edu" class="uri">https://cdmaps.polisci.ucla.edu</a>.</p>
+<p>House general elections, All States, 2014 summary. (2022). <em>CQ voting and elections collection (web site)</em>. <a href="http://library.cqpress.com.ezp-prod1.hul.harvard.edu/elections/avg2014-3us1" class="uri">http://library.cqpress.com.ezp-prod1.hul.harvard.edu/elections/avg2014-3us1</a></p>
 </div>

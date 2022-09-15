@@ -2,15 +2,14 @@
 title: "01-Introduction"
 author: "Kento Yamada"
 date: "2022-09-14"
-categories: ["R"]
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(collapse = TRUE)
 knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
 ```
 
-```{r pull functions from "R" folder, include = FALSE}
+```{r pull functions, include = FALSE}
 setwd("R")
 files.sources = list.files()
 sapply(files.sources, source)
@@ -19,50 +18,90 @@ setwd("..")
 
 ```{r load packages, include = FALSE}
 library(tidyverse)
-library(usmap)
 library(sf)
+library(usmap)
+library(usmapdata)
 ```
 
-```{r load data, include = FALSE}
+## Vote Share Margin: 2018
+
+```{r load vote share data, include = FALSE}
 vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
 ```
 
-
 ```{r 2018 two-party vote share margin by state, include = FALSE}
-midterms_2018_by_state <- vote_share %>%
+vote_share_2018 <- vote_share %>%
   filter(raceYear == 2018) %>%
   group_by(State) %>%
   summarize(total_R = sum(RepVotes), total_D = sum(DemVotes)) %>%
   
   # Calculate two-party vote share in each state
-  mutate(share_R = total_R / (total_R + total_D),
-         share_D = total_D / (total_R + total_D)) %>%
+  mutate(vote_share_R = 100 * total_R / (total_R + total_D),
+         vote_share_D = 100 * total_D / (total_R + total_D)) %>%
   
-  # Calculate vote margin
-  mutate(margin_R = share_R - share_D)  %>%
+  # Calculate vote margin (percent)
+  mutate(margin_R = vote_share_R - vote_share_D)  %>%
   
-  # State -> state
-  mutate(state = State) %>%
-  select(-State)
+  # rename: State -> state
+  rename(state = State)
 ```
 
-```{r 2018 vote share margin map, echo = FALSE}
-plot_usmap(data = midterms_2018_by_state, regions = "states", 
-           values = "margin_R", labels = TRUE, size = 0.2) +
+```{r 2018 vote share margin map, include = FALSE}
+plot_2018 <- plot_usmap(data = vote_share_2018, regions = "states", 
+           values = "margin_R") +
   
+  # Determine color based on vote share margin
   scale_fill_gradient2(
     high = "red",
     mid = "white",
     low = "blue",
-    name = "Vote Share Margin"
+    name = "Vote Share \nMargin (%)"
   ) +
 
-  labs(title = "Figure 1: Vote Share Margin by State: 2018") +
+  labs(title = "Figure 1: Vote Share Margin by State",
+       subtitle = "2018 House of Representatives Elections") +
   
-  # set theme
+  # Set theme
   theme(legend.position = "right",
-        legend.title = element_text(size = 7)) 
+        plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_text(size = 10)) 
 ``` 
+
+```{r obtain data on the position of labels, include = FALSE}
+state_centroids <- centroid_labels(regions = c("states"))
+state_centroids <- state_centroids[- which(state_centroids$abbr == "DC"),]
+```
+
+```{r manually adjust label positions, include = FALSE}
+state_centroids_adj <- state_centroids
+
+# Adjust label position for Rhode Island
+state_centroids_adj[which(state_centroids_adj$abbr == "RI"),]$x <- 
+  state_centroids_adj[which(state_centroids_adj$abbr == "RI"),]$x + 75000
+state_centroids_adj[which(state_centroids_adj$abbr == "RI"),]$y <- 
+  state_centroids_adj[which(state_centroids_adj$abbr == "RI"),]$y - 75000
+
+# Adjust label position for New Jersey
+state_centroids_adj[which(state_centroids_adj$abbr == "NJ"),]$x <- 
+  state_centroids_adj[which(state_centroids_adj$abbr == "NJ"),]$x + 120000
+
+# Adjust label position for Delaware
+state_centroids_adj[which(state_centroids_adj$abbr == "DE"),]$x <- 
+  state_centroids_adj[which(state_centroids_adj$abbr == "DE"),]$x + 120000
+```
+
+```{r make layer for labels of states, include = FALSE}
+state_label <- geom_text(
+        data = state_centroids_adj,
+        aes(x = x, y = y, label = abbr),
+        color = "black", size = 3)
+```
+
+```{r 2018 vote share margin map with labels, echo = FALSE}
+plot_2018 + state_label
+```
+
 
 * MA, CA, etc: extremely blue
 * vs Moderately red
@@ -71,49 +110,58 @@ plot_usmap(data = midterms_2018_by_state, regions = "states",
 * Does not necessarily translate to seat share
 * Republican's structural advantage (Bafumi et al, 2018)
 
+## Vote Share Margin: 2014
+
 ```{r 2014 two-party vote share margin by state, include = FALSE}
-midterms_2014_by_state <- vote_share %>%
+vote_share_2014 <- vote_share %>%
   filter(raceYear == 2014) %>%
   group_by(State) %>%
   summarize(total_R = sum(RepVotes), total_D = sum(DemVotes)) %>%
-  
+
   # Calculate vote share in each state
-  mutate(share_R = total_R / (total_R + total_D),
-         share_D = total_D / (total_R + total_D)) %>%
+  mutate(vote_share_R = 100 * total_R / (total_R + total_D),
+         vote_share_D = 100 * total_D / (total_R + total_D)) %>%
   
-  # Calculate vote share margin
-  mutate(margin_R = share_R - share_D)  %>%
+  # Calculate vote share margin (percent)
+  mutate(margin_R = vote_share_R - vote_share_D)  %>%
   
   # State -> state
-  mutate(state = State) %>%
-  select(-State)
+  rename(state = State)
 ```
 
 ```{r 2014 vote share margin map, echo = FALSE}
-plot_usmap(data = midterms_2014_by_state, regions = "states", 
-           values = "margin_R", labels = TRUE, size = 0.2) +
+plot_2014 <- plot_usmap(data = vote_share_2014, regions = "states", 
+                        values = "margin_R") +
   
+  # Determine color based on vote share margin
   scale_fill_gradient2(
     high = "red",
     mid = "white",
     low = "blue",
-    name = "Vote Share Margin"
+    name = "Vote Share \nMargin (%)"
   ) +
   
-  labs(title = "Figure 1: Vote Share Margin by State: 2014") +
+  labs(title = "Figure 2: Vote Share Margin by State",
+       subtitle = "2014 House of Representatives Elections") +
   
   # set theme  
   theme(legend.position = "right",
-        legend.title = element_text(size = 7)) 
+        plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_text(size = 10)) 
 ``` 
 
+```{r 2014 vote share margin map with labels, echo = FALSE}
+plot_2014 + state_label
+```
 
+## 2014 Midterm Elections in North Carolina
 ```{r download shapefile for 114th Congress (2014 election), eval = FALSE, include = FALSE}
 cd114 <- get_congress_map(114)
 ```
 
-```{r read shapefile, include = FALSE}
-cd114_nc <- st_read("analysis_data/districtShapes/districts114.shp") %>%
+```{r read shapefile for 114th Congress (2014 election), include = FALSE}
+cd114_nc <- readRDS("analysis_data/districts114.rds") %>%
   
   # Filter out data for North Carolina
   filter(STATENAME == "North Carolina") %>%
@@ -121,7 +169,10 @@ cd114_nc <- st_read("analysis_data/districtShapes/districts114.shp") %>%
   # Select column, rename, and convert district number to numeric
   select(DISTRICT) %>%
   rename(district_num = DISTRICT) %>%
-  mutate(district_num = as.numeric(district_num))
+  mutate(district_num = as.numeric(district_num)) %>%
+  
+  # Calculate centroid of each district for plotting purposes
+  mutate(centroid = st_centroid(geometry))
 ```
 
 ```{r 2014 two-party vote share margin by CD, include = FALSE}
@@ -139,26 +190,141 @@ midterms_2014_nc <- vote_share %>%
 cd114_nc_vote_share <- cd114_nc %>% left_join(midterms_2014_nc, by = "district_num")
 ```
 
-```{r}
-ggplot() +
+```{r North Carolina cities, include = FALSE}
+nc_cities <- data.frame(longitude = c(-80.842447, -78.638797, -79.788381), 
+                        latitude = c(35.219930, 35.786045, 36.073405),
+                        names = c("Charlotte", "Raleigh", "Greesboro"))
+
+nc_cities <- sf::st_as_sf(nc_cities, coords = c("longitude", "latitude"), 
+                          crs = 4269) # CRS: NAD83
+```
+
+```{r North Carolina vote margin, echo = FALSE, message = FALSE, warning = FALSE}
+ggplot(data = cd114_nc_vote_share) +
   
-  geom_sf(data = cd114_nc_vote_share, aes(fill = margin_R)) +
-  
+  # Plot vote margin (Republican two-party vote share - Democrat vote share)
+  geom_sf(aes(fill = margin_R), color = "grey80") +
   scale_fill_gradient2(
     high = "red",
     mid = "white",
     low = "blue",
-    name = "Vote Share Margin"
+    name = "Vote Share \nMargin (%)"
   ) +
+
+ # Label district numbers 
+ geom_sf_text(aes(label = district_num, geometry = centroid), color = "black") +
   
+ # Plot cities  
+ geom_sf(data = nc_cities, size = 2, shape = 21, fill = "red") +
+ geom_sf_text(data = nc_cities, aes(label = names), 
+              color = c("grey10", "black", "black"), size = 3,
+              # adjust the position of the labels (Charlotte, Raleigh, Greesboro)
+              nudge_y = c(-0.1, 0.1, -0.075)) +
+  
+ labs(title = "Figure 3: Vote Share Margin by Congressional District",
+      subtitle = "2014 House of Representatives Elections in North Carolina") +
+  
+ # Set theme
  theme(axis.line = element_blank(), axis.text = element_blank(),
        axis.ticks = element_blank(), axis.title = element_blank(),
        panel.background = element_blank())
 ```
 
+## Seat Share by Party: 2014
+```{r read 2014 data, include = FALSE}
+seat_share_2014 <- read_csv("analysis_data/house_2014_summary.csv", 
+                        skip = 2)
+seat_share_2014 <- head(seat_share_2014, 51) # ignore unnecessary lines
+```
+
+```{r clean 2014 data, include = FALSE}
+seat_share_2014 <- seat_share_2014 %>%
+  select(Area, RepWinner, DemWinner) %>%
+  # Convert to numeric
+  mutate(RepWinner = as.numeric(RepWinner),
+         DemWinner = as.numeric(DemWinner)) %>%
+
+  # Add up number of seats
+  group_by(Area) %>%
+  summarize(RepWinner = sum(RepWinner), 
+            DemWinner = sum(DemWinner))
+
+# Calculate seat share
+seat_share_2014 <- seat_share_2014 %>%
+  mutate(seat_share_R = 100 * (RepWinner / (RepWinner + DemWinner))) %>%
+  rename(state = Area)  # Rename column
+```
 
 
-# References
+```{r Republican seat share by state, echo = FALSE}
+plot_seat_share_2014 <- plot_usmap(data = seat_share_2014, regions = "states", 
+           values = "seat_share_R") +
+  
+  # Plot seat share
+  scale_fill_gradient2(low = "blue", 
+                       mid = "white", 
+                       high = "red", 
+                       midpoint = 50,
+                       name = "Seat Share (%)") +
 
-# Data Sources
-Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2013). *Digital Boundary Definitions of United States Congressional Districts, 1789-2012.* [Data file and code book]. Retrieved September 14, 2022 from https://cdmaps.polisci.ucla.edu.
+  labs(title = "Figure 4: Republican Seat Share by State",
+       subtitle = "2014 House of Representatives Elections") +
+  
+  # Set theme  
+  theme(legend.position = "right",
+        plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_text(size = 10)) 
+```
+
+```{r Republican seat share by state with labels, echo = FALSE}
+plot_seat_share_2014 + state_label
+```
+
+## Vote Share vs Seat Share
+```{r merge seat share data with vote share data}
+share_2014 <- left_join(vote_share_2014, seat_share_2014, by = "state") %>%
+  # calculate difference between vote share and seat share
+  mutate(diff_R = seat_share_R - vote_share_R)
+```
+
+
+```{r difference between seat share and vote share, echo = FALSE}
+diff_share_2014 <- plot_usmap(data = share_2014, regions = "states",
+           values = "diff_R") +
+  
+  # Plot difference between seat share and vote share
+  scale_fill_gradient2(low = "blue", 
+                       mid = "white", 
+                       high = "red", 
+                       midpoint = 0,
+                       name = "Rep. Seat Share - \nVote Share (%)") +
+
+  labs(title = "Figure 5: Republican Seat Share - Republican Vote Share",
+       subtitle = "2014 House of Representatives Elections") +
+  
+  # Set theme  
+  theme(legend.position = "right",
+        plot.title = element_text(size = 12),
+        plot.subtitle = element_text(size = 10),
+        legend.title = element_text(size = 8)) 
+```
+
+
+
+```{r plot showing difference between seat share and vote share (with labels), echo = FALSE}
+diff_share_2014 + state_label
+```
+
+
+
+In `r sum(share_2014$margin_R > 0)` states, Republicans gained a higher seat share relative to their vote share.
+
+
+
+## References
+
+## Data Sources
+Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2013). *Digital Boundary Definitions of United States Congressional Districts, 1789-2012* [Data file and code book]. https://cdmaps.polisci.ucla.edu.
+
+House general elections, All States, 2014 summary. (2022). *CQ voting and elections collection (web site)*. http://library.cqpress.com.ezp-prod1.hul.harvard.edu/elections/avg2014-3us1
