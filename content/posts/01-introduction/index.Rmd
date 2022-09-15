@@ -26,7 +26,14 @@ library(tigris)
 library(plotly)
 ```
 
+As I prepare to predict the upcoming election, I would like to start my blog series by analyzing past elections. In this blog post, I will focus on two recent midterm elections: the 2014 and 2018 House of Representatives elections.
+
 ## Vote Share Margin by State: 2018
+
+It is well known that the president’s party tends to lose seats in the House in a midterm election. In fact, the president’s party lost House seats in 26 out of the 29 midterm elections since 1900, and the 3 exceptions, the 1934, 1998, and 2002 elections, all took place when the incumbent president was exceptionally popular (Franklin Roosevelt, Bill Clinton, and George W. Bush, respectively) (Campbell, 2018a, p. 1). Not surprisingly, in 2018, various models predicted that the Democrats would take back the House (Abramowitz, 2018; Campbell, 2018b, Lewis-Beck & Tien, 2018).
+
+Indeed, Democrats won 235 seats, gaining 41 seats. Figure 1 shows the two-party vote share margin by state. Democrats won the popular vote in 25 states and had an extremely large vote share margin in traditionally blue states with large urban populations such as California, New York, and Massachusetts.
+
 ```{r load vote share data, include = FALSE}
 vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
 ```
@@ -60,7 +67,7 @@ plot_vote_share_margin_2018 <-
     name = "Vote Share \nMargin (%)"
   ) +
 
-  labs(title = "Vote Share Margin by State",
+  labs(title = "Figure 1: Vote Share Margin by State",
        subtitle = "2018 House of Representatives Elections") +
   
   # Set theme
@@ -104,9 +111,17 @@ state_label <- geom_text(data = state_centroids_adj,
 plot_vote_share_margin_2018 + state_label
 ```
 
+```{r calculate number of states where Democrats won popular vote, include = FALSE}
+sum(vote_share_2018$margin_R < 0)
+```
+
 ## Vote Share Margin: 2014
 
 ### Vote Share Margin by State
+
+In a similar vein, under then-incumbent President Obama, Democrats struggled in the 2014 midterm elections. Similar to Figure 1, Figure 2 shows the two-party vote share margin by state, and comparing the two reveals some interesting findings. There were 7 states (Arizona, Colorado, Iowa, Nevada, Pennsylvania, Virginia, and Wisconsin) where Republicans won the popular vote in 2014 but lost the popular vote in 2018. There were no states where the Republicans lost the popular vote in 2014 but won the popular vote in 2018. 
+While further analysis is needed to determine which states best fit the characteristics of a swing state, it is possible that those 7 states could be swing states that are worth keeping an eye on in the upcoming elections.
+
 ```{r 2014 two-party vote share margin by state, include = FALSE}
 vote_share_2014 <- vote_share %>%
   filter(raceYear == 2014) %>%
@@ -135,7 +150,7 @@ plot_vote_share_margin_2014 <-
     low = "blue",
     name = "Vote Share \nMargin (%)") +
   
-  labs(title = "Vote Share Margin by State",
+  labs(title = "Figure 2: Vote Share Margin by State",
        subtitle = "2014 House of Representatives Elections") +
   
   # set theme  
@@ -149,7 +164,21 @@ plot_vote_share_margin_2014 <-
 plot_vote_share_margin_2014 + state_label
 ```
 
+
+```{r compare 2014 with 2018, include = FALSE}
+compare_2014_2018 <- left_join(vote_share_2014, vote_share_2018,
+                               by = "state") %>%
+  select(state, margin_R.x, margin_R.y)
+compare_2014_2018 %>%
+  filter(margin_R.x > 0 & margin_R.y < 0 |
+           margin_R.x < 0 & margin_R.y > 0)
+```
+
+
 ### Vote Share Margin by Congressional District
+
+Of course, the vote share at the state level do not directly determine the outcomes of House elections, so Figure 3, which shows the two-party vote share margin by congressional district in the 2014 elections, may be more informative. Note that the vote share margin is 100% in some districts because some candidates were unopposed by major candidates. Even after dropping those districts, we can see that the vast majority of candidates won by a sizable margin, which suggests that that the majority of seats were safe seats. Highly competitive districts are colored in white since the vote share margin is close to 0%, but there are few of them. Another take-away is that the districts where Democrats won tended to be geographically small, which reflects the fact that Democrats tend to perform well in urban areas.
+
 ```{r download shapefile for 114th Congress (2014 election), eval = FALSE, include = FALSE}
 cd114 <- get_congress_map(114) 
 ```
@@ -196,7 +225,7 @@ ggplot(data = cd114_vote_share) +
     low = "blue",
     name = "Vote Share \nMargin (%)") +
 
- labs(title = "Vote Share Margin by Congressional District",
+ labs(title = "Figure 3: Vote Share Margin by Congressional District",
       subtitle = "2014 House of Representatives Elections",
       caption = "Shapefile was obatined from Lewis et al. (2020)") +
   
@@ -206,7 +235,10 @@ ggplot(data = cd114_vote_share) +
        panel.background = element_blank())
 ```
 
-### Example: North Carolina
+#### Example: North Carolina
+
+Since there is a limit to what a nation-wide map can tell us, I decided to take a closer look at a state that may give us insights about Democratic voters’ geographic distribution and its relation to redistricting. As Figure 4 shows, in the 2014 House elections, Democrats won 3 seats out of 12, winning by large margins in Districts 1, 4, and 12. Those three districts seem to have been designed to include the largest cities in the State, and they were one of the least geographically compact districts act the time (Ingraham, 2014). Indeed, in 2016, the maps were ordered to be redrawn on the grounds that they were racially gerrymandered. District 1, which encompasses the black neighborhoods of Durham, and District 12, which stretches between Charlotte and Greensboro, were both determined to have been racially gerrymandered, and the decision was upheld by the Supreme Court in 2017 (Barnes, 2017; Hurley, 2017). 
+
 ```{r extract data for 2014 NC, include = FALSE}
 cd114_nc_vote_share <- cd114_vote_share %>%
   filter(State %in% "North Carolina") %>%
@@ -248,7 +280,7 @@ ggplot(data = cd114_nc_vote_share) +
               nudge_x = c(0, 20000, 0, 0),
               nudge_y = c(-10000, 20000, -20000, 20000)) +
   
- labs(title = "Vote Share Margin by Congressional District",
+ labs(title = "Figure 4: Vote Share Margin by Congressional District",
       subtitle = "2014 House of Representatives Elections in North Carolina",
       caption = "Shapefile was obatined from Lewis et al. (2020)") +
   
@@ -259,6 +291,11 @@ ggplot(data = cd114_nc_vote_share) +
 ```
 
 ## Vote Share vs Seat Share: 2014
+
+As the case of North Carolina shows, how districts are drawn as well as the design of electoral institutions impact electoral outcomes. In general, the Republican Party has a structural advantage because Democrats tend to be concentrated in small areas and because many Republican-controlled state legislatures have pursued gerrymandering (Bafumi et al., 2018, p. 10).
+
+It goes without saying that vote share does not necessarily match into seat share. Figure 5 is an interactive plot that allows you to explore the difference between the Republican vote share and Republican seat share in the 2014 House elections. By nature, seat shares are not exactly equal to the vote share, and there is a discrepancy between the two in both blue states and red states. However, at least in 2014, Republicans won a disproportionately high seat share relative to their vote share in 35 states. In one extreme case (Michigan), Republicans won a majority of the seats (9 out of 14) despite having lost the state-wide popular vote. This analysis by no means is enough to explore the structural advantages that the parties have in different states nor is does it provide evidence of gerrymandering. Rather, the take-away here is that vote shares might not neatly translate into seat share. In the coming weeks, I hope to keep this in mind as I start building my predictive models.
+
 ```{r 2014 vote share by State, include = FALSE}
 plot_vote_share_2014 <- 
   plot_usmap(data = vote_share_2014, regions = "states", values = "vote_share_R") +
@@ -319,7 +356,7 @@ plot_seat_share_2014 <-
 ```{r plot showing difference between seat share and vote share (with labels), echo = FALSE}
 subplot(plot_vote_share_2014,
         plot_seat_share_2014) %>%
-  layout(title = "Republican Vote Share vs Seat Share:\n2014 House of Representatives Election",
+  layout(title = "Figure 5: Republican Vote Share vs Seat Share:\n2014 House of Representatives Election",
          annotations = 
            list(list(x = 0.2,  y = 0.8,  text = "Vote Share",  
                      xref = "paper",  yref = "paper",  
@@ -344,12 +381,12 @@ share_2014 <- left_join(vote_share_2014, seat_share_2014, by = "state") %>%
   mutate(diff_R = seat_share_R - vote_share_R)
 ```
 
-```{r winning majority of seats without winning popular vote: R, eval = FALSE}
+```{r winning majority of seats without winning popular vote: R, eval = FALSE, include = FALSE}
 share_2014 %>%
   filter(vote_share_R < 50 & seat_share_R > 50)
 ```
 
-```{r winning majority of seats without winning popular vote: D, eval = FALSE}
+```{r winning majority of seats without winning popular vote: D, eval = FALSE, include = FALSE}
 share_2014 %>%
   filter(vote_share_R > 50 & seat_share_R < 50)
 ```
@@ -358,9 +395,24 @@ In `r sum(share_2014$diff_R > 0)` states, Republicans gained a higher seat share
 
 
 
-## References
+### References
+Abramowitz, A. (2018). Will Democrats Catch a Wave? The Generic Ballot Model and the 2018 US House Elections. *PS: Political Science & Politics, 51*(S1), 4-6. doi:10.1017/S1049096518001567
 
-## Data Sources
-Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2020). *Digital Boundary Definitions of United States Congressional Districts* (Version 1.5) [Data file]. https://cdmaps.polisci.ucla.edu.
+Bafumi, J., Erikson, R., & Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. *PS: Political Science & Politics, 51*(S1), 7-11. doi:10.1017/S1049096518001579
+
+Barnes, R. (2017, May 22). Supreme Court rules race improperly dominated N.C. redistricting efforts. *The Washington Post.* https://www.washingtonpost.com/politics/courts_law/supreme-court-rules-race-improperly-dominated-nc-redistricting-efforts/2017/05/22/c159fc70-3efa-11e7-8c25-44d09ff5a4a8_story.html
+
+Campbell, J. (2018a). Introduction: Forecasting the 2018 US Midterm Elections. *PS: Political Science & Politics, 51*(S1), 1-3. doi:10.1017/S1049096518001592
+
+Campbell, J. (2018b). The Seats-in-Trouble Forecasts of the 2018 Midterm Congressional Elections. *PS: Political Science & Politics, 51*(S1), 12-16. doi:10.1017/S1049096518001580
 
 House general elections, All States, 2014 summary. (2022). *CQ voting and elections collection (web site)*. http://library.cqpress.com.ezp-prod1.hul.harvard.edu/elections/avg2014-3us1
+
+
+Hurley, L. (2017, May 22). Supreme Court tosses Republican-drawn North Carolina voting districts. *Reuters.* https://www.reuters.com/article/us-usa-court-voters-idUSKBN18I1SG?il=0
+
+Ingraham, C. (2014, May 15). America’s most gerrymandered congressional districts. *The Washington Post.* https://www.washingtonpost.com/news/wonk/wp/2014/05/15/americas-most-gerrymandered-congressional-districts/
+
+Jeffrey B. Lewis, Brandon DeVine, Lincoln Pitcher, and Kenneth C. Martis. (2020). *Digital Boundary Definitions of United States Congressional Districts* (Version 1.5) [Data file]. https://cdmaps.polisci.ucla.edu
+
+Lewis-Beck, M., & Tien, C. (2018). House Forecasts: Structure-X Models For 2018. *PS: Political Science & Politics, 51*(S1), 17-20. doi:10.1017/S1049096518001257
