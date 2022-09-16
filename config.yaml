@@ -14,7 +14,7 @@ params:
   social:
     - icon: github
       name: Github
-      url: https://github.com/kentoyamada100/election-analytics-2022-midterms
+      url: https://github.com/kentoyamada100/election-analytics-2022-midterms/tree/main/content
   subtitle: "Kento Yamada (Harvard College) | Gov 1347: Election Analytics"
 menu:
   main:
