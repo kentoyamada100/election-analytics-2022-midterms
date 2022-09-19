@@ -221,7 +221,11 @@ stargazer(model1, model2, model3, model4, model5, model6,
 knitr::include_graphics("static/02-economy/table1.png")
 ```
 
+```{r}
+blogdown::build_dir("static")
+```
 
+![Scenario 1: Across columns](/02-economy/table1.png)
 
 ```{r correlation test, include = FALSE}
 cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
