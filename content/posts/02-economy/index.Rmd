@@ -5,7 +5,7 @@ date: '2022-09-19'
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
 ```
@@ -248,15 +248,15 @@ cor.test.results.2 <- cor.test(df_without_2020$gdp_q7_q6,
                                df_without_2020$rdi_q7_q6)
 ```
 
-`r round(cor.coef, 2) ` and (p-value: r format(cor.test.results$p.value, 2, scientific = TRUE, digits = 2)`)
+`r round(cor.coef, 2) ` and (p-value: `r format(cor.test.results$p.value, scientific = TRUE, digits = 2)`)
 
 
-`r round(cor.coef.2, 2) `  (p-value: `r format(cor.test.results.2$p.value, 2, scientific = TRUE, digits = 2)`)
+`r round(cor.coef.2, 2) `  (p-value: `r format(cor.test.results.2$p.value, scientific = TRUE, digits = 2)`)
 
 
 #### What's wrong with these models?: Outlier
 
-```{r outlier, echo = FALSE, message = FALSE, warning = FALSE, fig.cap = "Figure 1: GDP Growth vs RDI Growth: Q7-Q8"}
+```{r outlier, echo = FALSE, message = FALSE, warning = FALSE, fig.cap = "GDP Growth vs RDI Growth: Q7-Q8"}
 ggplot(data = df, aes(x = df$gdp_q7_q6, y = df$rdi_q7_q6)) +
   geom_point() +
   theme_classic() +
@@ -312,7 +312,7 @@ modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7,
 
 ## Model Testing and Predictions
 
-```{r plot residuals, echo = FALSE, fig.cap = "Actual Values vs Predicted Values"}
+```{r, echo = FALSE, fig.cap = "Actual Values vs Predicted Values"}
 plot(df$election_year, df$pp_vote_share,
      type = "l",
      xlab = "Year", ylab = "President's Party's Vote Share")
@@ -594,7 +594,7 @@ table3 <- ggplot() +
            label = list(model_eval))
 ```
 
-```{r combine table with plots, fig.cap = "Model Testing & Predictions", echo = FALSE}
+```{r, echo = FALSE, fig.cap = "Model Testing & Predictions"}
 table3 /(dist_err_A + dist_err_B + dist_err_C + dist_err_D)
 ```
 
