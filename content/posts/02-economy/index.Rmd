@@ -146,7 +146,6 @@ unemp_df_final <- left_join(unemp_df_q7, unemp_df_q6, by = "election_year") %>%
   left_join(unemp_df_q1, by = "election_year") 
 ```
 
-
 ```{r clean share_df, include = FALSE}
 # Define incumbent President's party affiliation
 share_df_final <- share_df
@@ -209,19 +208,17 @@ model5 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm, data = df)
 model6 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm + unrate_q7, data = df)
 ```
 
-
 ```{r regression output 1, include = FALSE}
 stargazer(model1, model2, model3, model4, model5, model6,
           type = 'html',
           title = "Table 1: Models of Economic Voting Based on 1948-2020 Data",
-          dep.var.labels   = "President's Party's Vote Share",
+          dep.var.labels = "President's Party's Vote Share",
           covariate.labels = 
             c('RDI Q6-Q7', 'Midterm', 'Unemployment Q7', 'GDP Q6-Q7'),
           notes = "Data on RDI was unavailable for 1948-1958 elections.",
           column.sep.width = "5pt") %>%
   as_image(file = "static/posts/02-economy/table1.png")
 ```
-
 
 ```{r include table, include = FALSE}
 blogdown::build_dir("static")
@@ -232,8 +229,28 @@ blogdown::build_dir("static")
 
 #### What's wrong with these models?: Multicollinearity
 ```{r correlation test, include = FALSE}
-cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
+cor.coef <- cor(df$gdp_q7_q6[!is.na(df$rdi_q7_q6)], 
+                df$rdi_q7_q6[!is.na(df$rdi_q7_q6)])
+cor.test.results <- cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
 ```
+
+
+```{r df_2020, include = FALSE}
+# Discard 2020
+df_without_2020 <- df[df$election_year != 2020,]
+```
+
+```{r correlation test 2, include = FALSE}
+cor.coef.2 <- cor(df_without_2020$gdp_q7_q6[!is.na(df_without_2020$rdi_q7_q6)], 
+                df_without_2020$rdi_q7_q6[!is.na(df_without_2020$rdi_q7_q6)])
+cor.test.results.2 <- cor.test(df_without_2020$gdp_q7_q6, 
+                               df_without_2020$rdi_q7_q6)
+```
+
+`r round(cor.coef, 2) ` and ($p = $`r format(cor.test.results$p.value, 2, scientific = TRUE, digits = 2)`)
+
+
+`r round(cor.coef.2, 2) `  ($p = $`r format(cor.test.results.2$p.value, 2, scientific = TRUE, digits = 2)`)
 
 
 #### What's wrong with these models?: Outlier
@@ -253,13 +270,8 @@ ggplot(data = df, aes(x = df$gdp_q7_q6, y = df$rdi_q7_q6)) +
 ```
 
 
-```{r df_2020, include = FALSE}
-# Discard clear outlier
-df_without_2020 <- df[df$election_year != 2020,]
-```
 
-
-## 4 Predictive Models
+## Predictive Models
 ```{r modelA, include = FALSE}
 modelA <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df_without_2020)
 ```
@@ -298,8 +310,7 @@ modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7,
 ```
 
 
-
-## 3. Model Testing and Predictions
+## Model Testing and Predictions
 
 ```{r plot residuals, echo = FALSE}
 plot(df$election_year, df$pp_vote_share,
@@ -309,19 +320,19 @@ plot(df$election_year, df$pp_vote_share,
 
 # Predicted values based on Model A
 # Note that for Model A, data for 1948-1958 elections is missing
-lines(df$election_year[-c(1:6, length(df$election_year))], 
+lines(df_without_2020$election_year[-(1:6)], 
        predict(modelA, df_without_2020)[-(1:6)], col = "red", lty = "dotted") 
 
 # Predicted values based on Model B
-lines(df$election_year[-length(df$election_year)], #De-select 2020
+lines(df_without_2020$election_year,
        predict(modelB, df_without_2020), col = "blue", lty = "dotted")
 
 # Predicted values based on Model C
-lines(df$election_year[-length(df$election_year)], #De-select 2020
+lines(df_without_2020$election_year,
        predict(modelC, df_without_2020), col = "yellow") 
 
 # Predicted values based on Model D
-lines(df$election_year[-length(df$election_year)], #De-select 2020
+lines(df_without_2020$election_year, #De-select 2020
        predict(modelD, df_without_2020), col = "lightgreen") 
 
 # Add legend
@@ -331,7 +342,7 @@ legend(2008, 57, legend=c("Model A", "Model B", "Model C", "Model D"),
 ```
 
 ```{r RMSE, include = FALSE}
-# Calculate prediction errors, take mean, then take square root
+# Square prediction errors, take mean, then take square root
 rmse_modelA <- (modelA$model$pp_vote_share - modelA$fitted.values)^2 %>%
   mean() %>% sqrt()
 rmse_modelB <- (modelB$model$pp_vote_share - modelB$fitted.values)^2 %>%
@@ -342,39 +353,56 @@ rmse_modelD <- (modelD$model$pp_vote_share - modelD$fitted.values)^2 %>%
   mean() %>% sqrt()
 ```
 
-
 ```{r out-of-sample modelA, include = FALSE}
 os_modelA <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, 
-                     data = df_without_2020[df_without_2020$election_year != 2018,])
-os_modelA_pred <- predict(os_modelA, 
-                          df_without_2020[df_without_2020$election_year == 2018,])
+                # Leave 2018 out of the model
+                data = df_without_2020[df_without_2020$election_year != 2018,])
+
+os_modelA_pred <-
+  # Predict 2018 outcomes
+  predict(os_modelA, df_without_2020[df_without_2020$election_year == 2018,])
+
+# Calculate difference between predicted value and true value
 os_modelA_true <- df_without_2020$pp_vote_share[df_without_2020$election_year == 2018]
 os_modelA_error <- os_modelA_pred - os_modelA_true
 ```
 
 ```{r out-of-sample modelB, include = FALSE}
 os_modelB <- lm(pp_vote_share ~ gdp_q7_q6  + midterm, 
-                     data = df_without_2020[df_without_2020$election_year != 2018,])
-os_modelB_pred <- predict(os_modelB, 
-                          df_without_2020[df_without_2020$election_year == 2018,])
+                # Leave 2018 out of the model
+                data = df_without_2020[df_without_2020$election_year != 2018,])
+
+os_modelB_pred <- 
+  # Predict 2018 outcomes
+  predict(os_modelB, df_without_2020[df_without_2020$election_year == 2018,])
+
+# Calculate difference between predicted value and true value
 os_modelB_true <- df_without_2020$pp_vote_share[df_without_2020$election_year == 2018]
 os_modelB_error <- os_modelB_pred - os_modelB_true
 ```
 
 ```{r out-of-sample modelC, include = FALSE}
-os_modelC <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
-                     data = df_without_2020[df_without_2020$election_year != 2018,])
-os_modelC_pred <- predict(os_modelC, 
-                          df_without_2020[df_without_2020$election_year == 2018,])
+os_modelC <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7,
+                # Leave 2018 out of the model
+                data = df_without_2020[df_without_2020$election_year != 2018,])
+os_modelC_pred <- 
+  # Predict 2018 outcomes
+  predict(os_modelC, df_without_2020[df_without_2020$election_year == 2018,])
+
+# Calculate difference between predicted value and true value
 os_modelC_true <- df_without_2020$pp_vote_share[df_without_2020$election_year == 2018]
 os_modelC_error <- os_modelC_pred - os_modelC_true
 ```
 
 ```{r out-of-sample modelD, include = FALSE}
-os_modelD <- lm(pp_vote_share ~ gdp_q7_q1 + midterm + unrate_q7, 
-                     data = df_without_2020[df_without_2020$election_year != 2018,])
-os_modelD_pred <- predict(os_modelD, 
-                          df_without_2020[df_without_2020$election_year == 2018,])
+os_modelD <- lm(pp_vote_share ~ gdp_q7_q1 + midterm + unrate_q7,
+                # Leave 2018 out of the model
+                 data = df_without_2020[df_without_2020$election_year != 2018,])
+os_modelD_pred <- 
+  # Predict 2018 outcomes
+  predict(os_modelD, df_without_2020[df_without_2020$election_year == 2018,])
+
+# Calculate difference between predicted value and true value
 os_modelD_true <- df_without_2020$pp_vote_share[df_without_2020$election_year == 2018]
 os_modelD_error <- os_modelD_pred - os_modelD_true
 ```
@@ -402,7 +430,6 @@ cv_modelA_error <-
 })
 ```
 
-
 ```{r cross validation Model B, include = FALSE}
 cv_modelB_error <- 
   sapply(1:1000, function(i){
@@ -425,7 +452,6 @@ cv_modelB_error <-
 })
 ```
 
-
 ```{r cross validation Model C, include = FALSE}
 cv_modelC_error <- 
   sapply(1:1000, function(i){
@@ -433,7 +459,7 @@ cv_modelC_error <-
     years_outsamp <- sample(df_without_2020$election_year, 8) 
     
     # Run linear regression based on the remaining observations
-    outsamp_mod <- lm(pp_vote_share ~ gdp_q7_q6 + midterm,
+    outsamp_mod <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7,
                     df_without_2020[!(df_without_2020$election_year %in% years_outsamp),])
     
     # Make predictions based on the model
@@ -455,7 +481,7 @@ cv_modelD_error <-
     years_outsamp <- sample(df_without_2020$election_year, 8) 
     
     # Run linear regression based on the remaining observations
-    outsamp_mod <- lm(pp_vote_share ~ gdp_q7_q6 + midterm,
+    outsamp_mod <- lm(pp_vote_share ~ gdp_q7_q1 + midterm + unrate_q7,
                     df_without_2020[!(df_without_2020$election_year %in% years_outsamp),])
     
     # Make predictions based on the model
@@ -470,6 +496,14 @@ cv_modelD_error <-
 })
 ```
 
+```{r mean out-of-sample residual plot, include = FALSE}
+histograms <- list(
+  hist(cv_modelA_error, xlab = "", main = ""),
+  hist(cv_modelB_error, xlab = "", main = ""),
+  hist(cv_modelC_error, xlab = "", main = ""),
+  hist(cv_modelD_error, xlab = "", main = "")
+)
+```
 
 ```{r predictions, include = FALSE}
 # Get data for 2022
@@ -514,13 +548,13 @@ model_eval <- as.data.frame(
   matrix(
     c(
     "A", summary(modelA)$r.squared, rmse_modelA, os_modelA_error, 
-     mean(cv_modelA_error), modelA_pred,
+     histograms[1], modelA_pred,
     "B", summary(modelB)$r.squared, rmse_modelB, os_modelB_error,
-     mean(cv_modelB_error), modelB_pred,
+     histograms[2], modelB_pred,
     "C", summary(modelC)$r.squared, rmse_modelC, os_modelC_error,
-     mean(cv_modelC_error), modelC_pred,
+     histograms[3], modelC_pred,
     "D", summary(modelD)$r.squared, rmse_modelD, os_modelD_error,
-    mean(cv_modelD_error), modelD_pred
+    histograms[4], modelD_pred
     ),
     ncol = 8, byrow = TRUE))
 # Label columns
@@ -531,15 +565,11 @@ names(model_eval) <- c("Model", "R-squared", "RMSE",
 model_eval[,2] <- as.numeric(model_eval[,2])
 model_eval[,3] <- as.numeric(model_eval[,3])
 model_eval[,4] <- as.numeric(model_eval[,4])
-model_eval[,5] <- as.numeric(model_eval[,5])
-model_eval[,6] <- as.numeric(model_eval[,6])
-model_eval[,7] <- as.numeric(model_eval[,7])
-model_eval[,8] <- as.numeric(model_eval[,8])
 ```
 ```{r format table 3, echo = FALSE}
 gt(model_eval) %>%
   tab_header(title = "Table 3: Model Testing and Prediction for 2022") %>%
-  fmt_number(columns = 2:8, decimals = 2) %>%
+  fmt_number(columns = 2:3, decimals = 2) %>%
   tab_spanner(
     label = "Model Evaluation",
     columns = 2:5
@@ -547,8 +577,19 @@ gt(model_eval) %>%
   tab_spanner(
     label = "Predictions",
     columns = 6:8
-  ) 
+  ) %>%
+  text_transform(
+    locations = cells_body(columns = 5),
+    fn = function(x) {
+      map(histograms, plot)
+    }
+  )
 ```
+
+```{r}
+model_eval
+```
+
 
 ### Predictions
 
