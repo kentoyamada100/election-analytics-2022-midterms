@@ -1,7 +1,7 @@
 ---
 title: "02-Economy"
 author: "Kento Yamada"
-date: '2022-09-15'
+date: '2022-09-19'
 output: html_document
 ---
 
@@ -219,7 +219,7 @@ stargazer(model1, model2, model3, model4, model5, model6,
 ```
 
 
-```{r include table 1, include = FALSE}
+```{r include table, include = FALSE}
 blogdown::build_dir("static")
 ```
 
@@ -253,7 +253,7 @@ model7 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm + unrate_q7, data = df_without_
 model8 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, data = df_without_2020)
 ```
 
-```{r regression output 2, results = 'asis', echo = FALSE}
+```{r regression output 2, include = FALSE}
 stargazer(model1.1, model2.1, model3.1, model4.1, model7, model8,
           type = 'html',
           style = 'apsr',
@@ -261,8 +261,7 @@ stargazer(model1.1, model2.1, model3.1, model4.1, model7, model8,
           dep.var.labels   = "President's Party's Vote Share",
           covariate.labels = 
             c('RDI Q6-Q7', 'Midterm', 'GDP Q6-Q7', 'Unemployment Q7'),
-          notes = "Data on RDI was unavailable for 1948-1958 elections.",
-          single.row = TRUE) %>%
+          notes = "Data on RDI was unavailable for 1948-1958 elections.") %>%
   as_image(file = "static/posts/02-economy/table2.png")
 ```
 
