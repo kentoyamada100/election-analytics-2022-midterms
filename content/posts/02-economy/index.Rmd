@@ -19,7 +19,7 @@ library(ggpmisc)
 library(patchwork)
 ```
 
-Voters often look back to the past when deciding who to vote for. In particular, for good or for bad, economic conditions tend to have an impact on how well the party in power performs in elections (Achen & Bartels, 2017). In this week, I will focus on economic conditions as a key predictor of electoral outcomes.
+Voters often look back to the past when deciding who to vote for. In particular, for good or for bad, economic conditions tend to have an impact on how well the party in power performs in elections (Achen & Bartels, 2017). In this week, I will shed light on economic variables as key predictors of electoral outcomes.
 
 ```{r load data, include = FALSE}
 # Data on GDP/quarter
@@ -193,7 +193,7 @@ df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
 
 Focusing on Presidential elections, Achen & Bartels (2017) demonstrate that short-term economic growth is a strong predictor of the popular vote margin of the President’s party. They argue that the growth in real disposable income (RDI) per capita in the 2nd and 3rd quarter of the Presidential election year is a better predictor than cumulative growth.
 
-Keeping this in mind, I hypothesize that the short-term changes in the state of the economy in the leadup to Congressional elections are strong predictors of how well the incumbent President’s party performs. Similar to Achen & Bartels (2017), I focus on the state of economy in the 2nd and 3rd quarter of the election year (Q6 and Q7). Focusing on Congressional elections between 1948 and 2020, I measure the performance of the President’s party by calculating the President’s party’s two-party vote share. As seen in Table 1, the independent variables in Models (1) ~ (6) are the RDI growth between Q6 and Q7, gross domestic product (GDP) growth between Q6 and Q7, unemployment in Q7, and whether the election is a midterm election. I included a dummy variable for midterms because the President’s party has tended to lose seats in a midterm election year (Campbell, 2018, p. 1).
+Keeping this in mind, I hypothesize that short-term changes in the state of the economy in the leadup to Congressional elections are strong predictors of how well the incumbent President’s party performs. Similar to Achen & Bartels (2017), I focus on the state of economy in the 2nd and 3rd quarter of the election year (Q6 and Q7). Focusing on Congressional elections between 1948 and 2020, I measure the performance of the President’s party by calculating the President’s party’s two-party vote share. As seen in Table 1, the independent variables in Models (1) ~ (6) are the RDI growth between Q6 and Q7, gross domestic product (GDP) growth between Q6 and Q7, unemployment in Q7, and whether the election is a midterm election. I included a dummy variable for midterms because the President’s party tends to lose seats in midterm elections (Campbell, 2018, p. 1).
 
 ```{r model 1, include = FALSE}
 model1 <- lm(pp_vote_share ~ rdi_q7_q6, data = df)
@@ -252,9 +252,9 @@ cor.test.results.2 <- cor.test(df_without_2020$gdp_q7_q6,
                                df_without_2020$rdi_q7_q6)
 ```
 
-As seen in Table 1, none of the variables in Models (1) ~ (6) were statistically significant. There are several issues with these models. In particular, the fact that both RDI growth and GDP growth were included as independent variables in models (5) and (6) could have been problematic because the two variables may be correlated. The correlation coefficient between RDI growth and GDP growth was `r round(cor.coef, 2)` (p-value: `r format(cor.test.results$p.value, scientific = TRUE, digits = 2)`). This may seem surprising because in theory, RDI growth and GDP growth should be positively correlated. As seen in Figure 1, the correlation coefficient may have been affected by an outlier: 2020.
+As seen in Table 1, none of the variables in Models (1) ~ (6) were statistically significant. There are several issues with these models. In particular, the fact that both RDI growth and GDP growth were included as independent variables in models (5) and (6) could have been problematic because the two variables may be correlated. The correlation coefficient between RDI growth and GDP growth was `r round(cor.coef, 2)` (p-value: `r format(cor.test.results$p.value, scientific = TRUE, digits = 2)`). This may seem surprising because in theory, RDI growth and GDP growth should be positively correlated. 
 
-The rest of the observations seem to suggest that there is a positive correlation. Indeed, after discarding the data from 2020, I found that the correlation coefficient was `r round(cor.coef.2, 2) ` (p-value: `r format(cor.test.results.2$p.value, scientific = TRUE, digits = 2)`). Because this suggests that there is a risk of multicollinearity, I decided not to include both RDI growth and GDP growth as independent variables in my models. Furthermore, I decided to exclude 2020 from my analysis because the data from 2020 harms the predictive power of the models.
+As seen in Figure 1, the correlation coefficient may have been affected by an outlier: 2020. The rest of the observations seem to suggest that there is a positive correlation. Indeed, after discarding the data from 2020, I found that the correlation coefficient was `r round(cor.coef.2, 2) ` (p-value: `r format(cor.test.results.2$p.value, scientific = TRUE, digits = 2)`). Because this suggests that there is a risk of multicollinearity, I decided not to simultaneously include RDI growth and GDP growth in my models. Furthermore, I decided to exclude 2020 from my analysis because the data from 2020 harms the predictive power of the models.
 
 
 ```{r outlier, echo = FALSE, message = FALSE, warning = FALSE, fig.cap = "GDP Growth vs RDI Growth: Q7-Q8"}
@@ -303,7 +303,7 @@ stargazer(modelA, modelB, modelC, modelD,
 
 ![](table2.png)
 
-As seen in Table 2, Models (B), (C), and (D) seem to be promising. Whereas RDI growth did not have a statistically significant impact, GDP growth between Q6 and Q7 had a statistically positive and significant impact on the President’s Party’s vote share (Model (B)). In addition to GDP growth, unemployment in Q7 had a negative and statistically significant impact (Model (C)). Interestingly, even after replacing short-term (Q6-Q1) GDP growth rate with cumulative (Q1-Q7) GDP growth rate, I found out that GDP growth rate still had a positive and statistically significant impact. Voters may partially take into account the President’s cumulative records even though they tend to judge the President based on the economic conditions in the election year.
+As seen in Table 2, Models (B), (C), and (D) seem promising. Whereas RDI growth did not have a statistically significant impact, GDP growth between Q6 and Q7 had a positive and statistically significant impact on the President’s party’s vote share (Model (B)). In addition to GDP growth, unemployment in Q7 had a negative and statistically significant impact (Model (C)). Interestingly, even after replacing short-term (Q6-Q7) GDP growth rate with cumulative (Q1-Q7) GDP growth rate, I found out that GDP growth rate still had a positive and statistically significant impact. Voters may partially take into account the President’s cumulative records even though they tend to judge the President based on the economic conditions in the election year.
 
 ```{r model Cd, include = FALSE}
 # Focus on the cases where the President is a Democrat
@@ -347,7 +347,7 @@ legend(2008, 57, legend=c("Model A", "Model B", "Model C", "Model D"),
        lty= c(3, 3, 1, 1), cex = 0.7)
 ```
 
-By comparing the predicted values based on Models (A) ~ (D) with the actual vote share, we can see that Models (C) and (D) tend to better predict the vote share (Figure 2). Indeed, the adjusted R^2 for Models (C) and (D) are higher than the adjusted R^2 for Models (A) and (B). Also, the root-mean-squared error was lower for Models (C) and (D) (See Figure 3 for details).
+By comparing the predicted values based on Models (A) ~ (D) with the actual vote share, we can see that Models (C) and (D) tend to better predict the vote share (Figure 2). Indeed, the adjusted $R^2$ for Models (C) and (D) are higher than the adjusted $R^2$ for Models (A) and (B). Also, the root-mean-squared errors are lower for Models (C) and (D) (See Figure 3 for details).
 
 I also conducted out-of-sample model testing to evaluate the models. First, for each of the models, I withheld the observation for the 2018 elections before fitting and observed how well the models predict the vote share in 2018. Here, I observed that model B performed the best (Figure 3, “Leave-One-Out”). Second, I conducted 1000 runs of cross-validation for each of the models, randomly holding out 8 observations in each iteration. As seen in the bottom half of Figure 3, the mean out-of-sample residuals tended to be around -1 to 1. The mean out-of-sample residuals based on Model D seemed to best cluster around 0. Overall, Models (C) and (D) seem to have nearly equivalent predictive power, though Model (D) slightly performs better. 
 
@@ -511,21 +511,25 @@ cv_modelD_error <-
 dist_err_A <- tibble(residual = cv_modelA_error) %>%
   ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
   labs(title = "Mean Out−of−Sample Residual: Model A") +
+  xlab(NULL) +
   theme_bw() +
   theme(text = element_text(size = 8))
 dist_err_B <- tibble(residual = cv_modelB_error) %>%
   ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
   labs(title = "Mean Out−of−Sample Residual: Model B") +
+  xlab(NULL) +
   theme_bw() +
   theme(text = element_text(size = 8))
 dist_err_C <- tibble(residual = cv_modelC_error) %>%
   ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
   labs(title = "Mean Out−of−Sample Residual: Model C") +
+  xlab(NULL) +
   theme_bw() +
   theme(text = element_text(size = 8))
 dist_err_D <- tibble(residual = cv_modelD_error) %>%
   ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
   labs(title = "Mean Out−of−Sample Residual: Model D") +
+  xlab(NULL) +
   theme_bw() +
   theme(text = element_text(size = 8))
 ```
@@ -609,7 +613,7 @@ table3 <- ggplot() +
 table3 /(dist_err_A + dist_err_B + dist_err_C + dist_err_D)
 ```
 
-Finally, I calculated the predictions for 2022 based on the 4 models. Since the data for Q7 is not available yet, I used the data from Q6 as a substitute. I measured short-term economic growth based on the change between Q6 and Q5 and long-term economic growth based on the change between Q6 and Q1. For all 4 models, the predicted President’s party’s vote share was 46 to 48%. However, since the confidence intervals are wide, it seems that the analysis I did this week is not be enough to accurately predict the outcomes of this election cycle (Figure 3, “2022 Prediction”). Note that there is little difference between Model (C) and Model (D), both in terms of how well they perform in various model evaluation metrics as well as the predicted vote share for 2022. This reinforces my analysis that whether we measure GDP growth based on Q6-Q7 records or on Q1-Q7 records does not make much difference.
+Finally, I calculated the predictions for 2022 based on the 4 models. Since the data for Q7 is not available yet, I used the data from Q6 as a substitute. I measured short-term economic growth based on the change between Q6 and Q5 and long-term economic growth based on the change between Q6 and Q1. For all 4 models, the predicted President’s party’s vote share was 46 to 48%. However, since the confidence intervals are wide, it seems that the analysis I did this week is not be enough to accurately predict the outcomes of this election cycle (Figure 3, “2022 Prediction”). Note that there is little difference between Model (C) and Model (D), both in terms of various model evaluation metrics as well as the predicted vote share for 2022. This reinforces my analysis that whether we measure GDP growth using Q6-Q7 records or Q1-Q7 records does not make much difference.
 
 ## References
 Achen, C. H. & Bartels, L. M. (2017). *Democracy for realists :why elections do not produce responsive government.* Princeton University Press.
