@@ -206,10 +206,9 @@ model6 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm + unrate_q7, data =
 ```
 
 
-```{r regression output 1, echo = FALSE}
+```{r regression output 1, include = FALSE}
 stargazer(model1, model2, model3, model4, model5, model6,
           type = 'html',
-          title = "Table 1: Models of Economic Voting Based on 1948-2020 Data",
           dep.var.labels   = "President's Party's Vote Share",
           covariate.labels = 
             c('RDI Q6-Q7', 'Midterm', 'Unemployment Q7', 'GDP Q6-Q7'),
@@ -218,6 +217,7 @@ stargazer(model1, model2, model3, model4, model5, model6,
   as_image(file = "content/posts/02-economy/index_files/table1.png")
 ```
 
+!["Table 1: Models of Economic Voting Based on 1948-2020 Data"](content/posts/02-economy/index_files/table1.png)
 
 
 ```{r correlation test, include = FALSE}
