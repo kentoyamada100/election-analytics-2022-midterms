@@ -214,7 +214,7 @@ stargazer(model1, model2, model3, model4, model5, model6,
             c('RDI Q6-Q7', 'Midterm', 'Unemployment Q7', 'GDP Q6-Q7'),
           notes = "Data on RDI was unavailable for 1948-1958 elections.",
           column.sep.width = "5pt") %>%
-  as_image(file = "static/02-economy/table1.png")
+  as_image(file = "static/posts/02-economy/table1.png")
 ```
 
 ```{r table 1, echo = FALSE, fig.align='center', out.width='100%', fig.cap='Models of Economic Voting Based on 1948-2020 Data'}
