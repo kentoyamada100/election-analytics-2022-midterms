@@ -15,7 +15,8 @@ library(tidyverse)
 library(stargazer)
 library(kableExtra)
 library(ggforce)
-library(gt)
+library(ggpmisc)
+library(patchwork)
 ```
 
 ```{r load data, include = FALSE}
@@ -247,20 +248,19 @@ cor.test.results.2 <- cor.test(df_without_2020$gdp_q7_q6,
                                df_without_2020$rdi_q7_q6)
 ```
 
-`r round(cor.coef, 2) ` and ($p = $`r format(cor.test.results$p.value, 2, scientific = TRUE, digits = 2)`)
+`r round(cor.coef, 2) ` and (p-value: r format(cor.test.results$p.value, 2, scientific = TRUE, digits = 2)`)
 
 
-`r round(cor.coef.2, 2) `  ($p = $`r format(cor.test.results.2$p.value, 2, scientific = TRUE, digits = 2)`)
+`r round(cor.coef.2, 2) `  (p-value: `r format(cor.test.results.2$p.value, 2, scientific = TRUE, digits = 2)`)
 
 
 #### What's wrong with these models?: Outlier
 
-```{r outlier, echo = FALSE, message = FALSE, warning = FALSE}
+```{r outlier, echo = FALSE, message = FALSE, warning = FALSE, fig.cap = "Figure 1: GDP Growth vs RDI Growth: Q7-Q8"}
 ggplot(data = df, aes(x = df$gdp_q7_q6, y = df$rdi_q7_q6)) +
   geom_point() +
   theme_classic() +
-  labs(title = "Figure 1: GDP Growth vs RDI Growth: Q7-Q8",
-       x = "Percent Change in GDP",
+  labs(x = "Percent Change in GDP",
        y = "Percent Change in RDI") +
   geom_circle(aes(x0 = 0, y0 = 0, r = 3), inherit.aes = FALSE,
               color = "blue")+
@@ -312,10 +312,9 @@ modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7,
 
 ## Model Testing and Predictions
 
-```{r plot residuals, echo = FALSE}
+```{r plot residuals, echo = FALSE, fig.cap = "Actual Values vs Predicted Values"}
 plot(df$election_year, df$pp_vote_share,
      type = "l",
-     main = "Figure 2: Actual Values vs Predicted Values",
      xlab = "Year", ylab = "President's Party's Vote Share")
 
 # Predicted values based on Model A
@@ -497,12 +496,27 @@ cv_modelD_error <-
 ```
 
 ```{r mean out-of-sample residual plot, include = FALSE}
-histograms <- list(
-  hist(cv_modelA_error, xlab = "", main = ""),
-  hist(cv_modelB_error, xlab = "", main = ""),
-  hist(cv_modelC_error, xlab = "", main = ""),
-  hist(cv_modelD_error, xlab = "", main = "")
-)
+# Plot mean out-of-sample residual
+dist_err_A <- tibble(residual = cv_modelA_error) %>%
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
+  labs(title = "Mean Out−of−Sample Residual: Model A") +
+  theme_bw() +
+  theme(text = element_text(size = 8), axis.text.x=element_blank())
+dist_err_B <- tibble(residual = cv_modelB_error) %>%
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
+  labs(title = "Mean Out−of−Sample Residual: Model B") +
+  theme_bw() +
+  theme(text = element_text(size = 8), axis.text.x=element_blank())
+dist_err_C <- tibble(residual = cv_modelC_error) %>%
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
+  labs(title = "Mean Out−of−Sample Residual: Model C") +
+  theme_bw() +
+  theme(text = element_text(size = 8), axis.text.x=element_blank())
+dist_err_D <- tibble(residual = cv_modelD_error) %>%
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
+  labs(title = "Mean Out−of−Sample Residual: Model D") +
+  theme_bw() +
+  theme(text = element_text(size = 8), axis.text.x=element_blank())
 ```
 
 ```{r predictions, include = FALSE}
@@ -547,47 +561,41 @@ modelD_pred <- predict(modelD, latest_data, interval = "prediction")
 model_eval <- as.data.frame(
   matrix(
     c(
-    "A", summary(modelA)$r.squared, rmse_modelA, os_modelA_error, 
-     histograms[1], modelA_pred,
-    "B", summary(modelB)$r.squared, rmse_modelB, os_modelB_error,
-     histograms[2], modelB_pred,
-    "C", summary(modelC)$r.squared, rmse_modelC, os_modelC_error,
-     histograms[3], modelC_pred,
-    "D", summary(modelD)$r.squared, rmse_modelD, os_modelD_error,
-    histograms[4], modelD_pred
+    "A", summary(modelA)$r.squared, rmse_modelA, os_modelA_error, modelA_pred,
+    "B", summary(modelB)$r.squared, rmse_modelB, os_modelB_error, modelB_pred,
+    "C", summary(modelC)$r.squared, rmse_modelC, os_modelC_error, modelC_pred,
+    "D", summary(modelD)$r.squared, rmse_modelD, os_modelD_error, modelD_pred
     ),
-    ncol = 8, byrow = TRUE))
+    ncol = 7, byrow = TRUE))
 # Label columns
 names(model_eval) <- c("Model", "R-squared", "RMSE", 
-                       "Leave-One-Out", "Cross Validation",
-                       "Fitted", "Lower", "Upper")
+                       "Leave-One-Out",
+                       "2022 Prediction: Fitted", 
+                       "Lower", 
+                       "Upper")
 # Convert to numeric
 model_eval[,2] <- as.numeric(model_eval[,2])
 model_eval[,3] <- as.numeric(model_eval[,3])
 model_eval[,4] <- as.numeric(model_eval[,4])
-```
-```{r format table 3, echo = FALSE}
-gt(model_eval) %>%
-  tab_header(title = "Table 3: Model Testing and Prediction for 2022") %>%
-  fmt_number(columns = 2:3, decimals = 2) %>%
-  tab_spanner(
-    label = "Model Evaluation",
-    columns = 2:5
-  ) %>%   
-  tab_spanner(
-    label = "Predictions",
-    columns = 6:8
-  ) %>%
-  text_transform(
-    locations = cells_body(columns = 5),
-    fn = function(x) {
-      map(histograms, plot)
-    }
-  )
+model_eval[,5] <- as.numeric(model_eval[,5])
+model_eval[,6] <- as.numeric(model_eval[,6])
+model_eval[,7] <- as.numeric(model_eval[,7])
+# Limit to 4 digits
+model_eval <- mutate_if(model_eval, is.numeric, format, digits= 4) 
 ```
 
-```{r}
-model_eval
+```{r make table, include = FALSE}
+# Plot table
+table3 <- ggplot() +
+  theme_void() +
+  annotate(geom = "table",
+           x = 1,
+           y = 1,
+           label = list(model_eval))
+```
+
+```{r combine table with plots, fig.cap = "Model Testing & Predictions", echo = FALSE}
+table3 /(dist_err_A + dist_err_B + dist_err_C + dist_err_D)
 ```
 
 
