@@ -218,14 +218,14 @@ stargazer(model1, model2, model3, model4, model5, model6,
 ```
 
 ```{r table 1, echo = FALSE, fig.align='center', out.width='100%', fig.cap='Models of Economic Voting Based on 1948-2020 Data'}
-knitr::include_graphics("static/02-economy/table1.png")
+knitr::include_graphics("static/posts/02-economy/table1.png")
 ```
 
 ```{r}
 blogdown::build_dir("static")
 ```
 
-![Scenario 1: Across columns](/02-economy/table1.png)
+![Scenario 1: Across columns](table1.png)
 
 ```{r correlation test, include = FALSE}
 cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
