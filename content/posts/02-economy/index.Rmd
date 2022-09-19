@@ -234,45 +234,39 @@ cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
 df_without_2020 <- df[df$election_year != 2020,]
 ```
 
-```{r model 1.1, include = FALSE}
-model1.1 <- lm(pp_vote_share ~ rdi_q7_q6, data = df_without_2020)
+```{r modelA, include = FALSE}
+modelA <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df_without_2020)
 ```
-```{r model 2.1, include = FALSE}
-model2.1 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df_without_2020)
+```{r modelB, include = FALSE}
+modelB <- lm(pp_vote_share ~ gdp_q7_q6 + midterm, data = df_without_2020)
 ```
-```{r model 3.1, include = FALSE}
-model3.1 <- lm(pp_vote_share ~ gdp_q7_q6, data = df_without_2020)
+```{r modelC, include = FALSE}
+modelC <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, data = df_without_2020)
 ```
-```{r model 4.1, include = FALSE}
-model4.1 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm, data = df_without_2020)
-```
-```{r model 7, include = FALSE}
-model7 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm + unrate_q7, data = df_without_2020)
-```
-```{r model 8, include = FALSE}
-model8 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, data = df_without_2020)
+```{r modelD, include = FALSE}
+modelD <-  lm(pp_vote_share ~ gdp_q7_q1 + midterm + unrate_q7, data = df_without_2020)
 ```
 
+
 ```{r regression output 2, include = FALSE}
-stargazer(model1.1, model2.1, model3.1, model4.1, model7, model8,
+stargazer(modelA, modelB, modelC, modelD,
           type = 'html',
-          style = 'apsr',
           title = "Table 2: Models of Economic Voting Based on 1948-2018 Data",
           dep.var.labels   = "President's Party's Vote Share",
-          covariate.labels = 
-            c('RDI Q6-Q7', 'Midterm', 'GDP Q6-Q7', 'Unemployment Q7'),
+          #covariate.labels = c('RDI Q6-Q7', 'Midterm', 'GDP Q6-Q7', 'Unemployment Q7'),
           notes = "Data on RDI was unavailable for 1948-1958 elections.") %>%
   as_image(file = "static/posts/02-economy/table2.png")
 ```
 
 ![](table2.png)
 
-```{r model 8.d, include = FALSE}
-model8.d <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+```{r model Cd, include = FALSE}
+modelCd <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
                data = df_without_2020 %>% filter(inc_pres_party == "D"))
 ```
 ```{r model 8.r, include = FALSE}
-model8.r <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
                data = df_without_2020 %>% filter(inc_pres_party == "R"))
 ```
+
 
