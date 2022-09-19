@@ -187,7 +187,7 @@ df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
   full_join(share_df_final, by = "election_year")
 ```
 
-## 1. Economic Voting
+## Economic Voting
 
 
 ```{r model 1, include = FALSE}
@@ -230,13 +230,13 @@ blogdown::build_dir("static")
 ![](table1.png)
 
 
-### Multicollinearity
+#### What's wrong with these models?: Multicollinearity
 ```{r correlation test, include = FALSE}
 cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
 ```
 
 
-### 2020: Outlier
+#### What's wrong with these models?: Outlier
 
 ```{r outlier, echo = FALSE, message = FALSE, warning = FALSE}
 ggplot(data = df, aes(x = df$gdp_q7_q6, y = df$rdi_q7_q6)) +
@@ -259,7 +259,7 @@ df_without_2020 <- df[df$election_year != 2020,]
 ```
 
 
-## 2. Four Predictive Models
+## 4 Predictive Models
 ```{r modelA, include = FALSE}
 modelA <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df_without_2020)
 ```
@@ -288,12 +288,20 @@ stargazer(modelA, modelB, modelC, modelD,
 ```
 
 ![](table2.png)
+```{r model Cd, include = FALSE}
+modelCd <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+               data = df_without_2020 %>% filter(inc_pres_party == "D"))
+```
+```{r model 8.r, include = FALSE}
+modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+               data = df_without_2020 %>% filter(inc_pres_party == "R"))
+```
 
-## In-sample Fit
-### $R^2$
 
-### Plotting the residuals
-```{r}
+
+## 3. Model Testing and Predictions
+
+```{r plot residuals, echo = FALSE}
 plot(df$election_year, df$pp_vote_share,
      type = "l",
      main = "Figure 2: Actual Values vs Predicted Values",
@@ -321,7 +329,7 @@ legend(2008, 57, legend=c("Model A", "Model B", "Model C", "Model D"),
        col=c("red", "blue", "yellow", "lightgreen"), 
        lty= c(3, 3, 1, 1), cex = 0.7)
 ```
-### Root-Mean-Squared Error
+
 ```{r RMSE, include = FALSE}
 # Calculate prediction errors, take mean, then take square root
 rmse_modelA <- (modelA$model$pp_vote_share - modelA$fitted.values)^2 %>%
@@ -334,8 +342,7 @@ rmse_modelD <- (modelD$model$pp_vote_share - modelD$fitted.values)^2 %>%
   mean() %>% sqrt()
 ```
 
-## Out-of-Sample Testing
-### Out-of-Sample Prediction
+
 ```{r out-of-sample modelA, include = FALSE}
 os_modelA <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, 
                      data = df_without_2020[df_without_2020$election_year != 2018,])
@@ -372,7 +379,6 @@ os_modelD_true <- df_without_2020$pp_vote_share[df_without_2020$election_year ==
 os_modelD_error <- os_modelD_pred - os_modelD_true
 ```
 
-### Cross-validation
 ```{r cross validation Model A, include = FALSE}
 cv_modelA_error <- 
   sapply(1:1000, function(i){
@@ -442,7 +448,6 @@ cv_modelC_error <-
 })
 ```
 
-
 ```{r cross validation Model D, include = FALSE}
 cv_modelD_error <- 
   sapply(1:1000, function(i){
@@ -465,7 +470,7 @@ cv_modelD_error <-
 })
 ```
 
-## Predictions
+
 ```{r predictions, include = FALSE}
 # Get data for 2022
 latest_data <- 
@@ -545,29 +550,9 @@ gt(model_eval) %>%
   ) 
 ```
 
-## Predictions
+### Predictions
 
 
-predictions <- rbind(modelA_pred, modelB_pred, modelC_pred, modelD_pred)
-```
-
-
-
-
-
-
-
-
-
-
-
-```{r model Cd, include = FALSE}
-modelCd <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
-               data = df_without_2020 %>% filter(inc_pres_party == "D"))
-```
-```{r model 8.r, include = FALSE}
-modelCr <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
-               data = df_without_2020 %>% filter(inc_pres_party == "R"))
-```
+## References
 
 
