@@ -209,6 +209,7 @@ model6 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm + unrate_q7, data =
 ```{r regression output 1, include = FALSE}
 stargazer(model1, model2, model3, model4, model5, model6,
           type = 'html',
+          title = "Table 1: Models of Economic Voting Based on 1948-2020 Data",
           dep.var.labels   = "President's Party's Vote Share",
           covariate.labels = 
             c('RDI Q6-Q7', 'Midterm', 'Unemployment Q7', 'GDP Q6-Q7'),
@@ -217,15 +218,12 @@ stargazer(model1, model2, model3, model4, model5, model6,
   as_image(file = "static/posts/02-economy/table1.png")
 ```
 
-```{r table 1, echo = FALSE, fig.align='center', out.width='100%', fig.cap='Models of Economic Voting Based on 1948-2020 Data'}
-knitr::include_graphics("static/posts/02-economy/table1.png")
-```
 
-```{r}
+```{r include table 1, include = FALSE}
 blogdown::build_dir("static")
 ```
 
-![Scenario 1: Across columns](table1.png)
+![](table1.png)
 
 ```{r correlation test, include = FALSE}
 cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
@@ -259,14 +257,16 @@ model8 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, data = df_without_
 stargazer(model1.1, model2.1, model3.1, model4.1, model7, model8,
           type = 'html',
           style = 'apsr',
-          title = "Models of Economic Voting Based on 1948-2018 Data",
+          title = "Table 2: Models of Economic Voting Based on 1948-2018 Data",
           dep.var.labels   = "President's Party's Vote Share",
           covariate.labels = 
             c('RDI Q6-Q7', 'Midterm', 'GDP Q6-Q7', 'Unemployment Q7'),
           notes = "Data on RDI was unavailable for 1948-1958 elections.",
-          single.row = TRUE)
+          single.row = TRUE) %>%
+  as_image(file = "static/posts/02-economy/table2.png")
 ```
 
+![](table2.png)
 
 ```{r model 8.d, include = FALSE}
 model8.d <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
