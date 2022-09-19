@@ -7,16 +7,16 @@ output: html_document
 
 
 
+<p>Voters often look back to the past when deciding who to vote for. In particular, for good or for bad, economic conditions tend to have an impact on how well the party in power performs in elections (Achen &amp; Bartels, 2017). In this week, I will focus on economic conditions as a key predictor of electoral outcomes.</p>
 <div id="economic-voting" class="section level2">
 <h2>Economic Voting</h2>
+<p>Focusing on Presidential elections, Achen &amp; Bartels (2017) demonstrate that short-term economic growth is a strong predictor of the popular vote margin of the President’s party. They argue that the growth in real disposable income (RDI) per capita in the 2nd and 3rd quarter of the Presidential election year is a better predictor than cumulative growth.</p>
+<p>Keeping this in mind, I hypothesize that the short-term changes in the state of the economy in the leadup to Congressional elections are strong predictors of how well the incumbent President’s party performs. Similar to Achen &amp; Bartels (2017), I focus on the state of economy in the 2nd and 3rd quarter of the election year (Q6 and Q7). Focusing on Congressional elections between 1948 and 2020, I measure the performance of the President’s party by calculating the President’s party’s two-party vote share. As seen in Table 1, the independent variables in Models (1) ~ (6) are the RDI growth between Q6 and Q7, gross domestic product (GDP) growth between Q6 and Q7, unemployment in Q7, and whether the election is a midterm election. I included a dummy variable for midterms because the President’s party has tended to lose seats in a midterm election year (Campbell, 2018, p. 1).</p>
 <p><img src="table1.png" /></p>
-<div id="whats-wrong-with-these-models-multicollinearity" class="section level4">
-<h4>What’s wrong with these models?: Multicollinearity</h4>
-<p>-0.72 and (p-value: 4.2e-06)</p>
-<p>0.58 (p-value: 8e-04)</p>
-</div>
-<div id="whats-wrong-with-these-models-outlier" class="section level4">
-<h4>What’s wrong with these models?: Outlier</h4>
+<div id="whats-wrong-with-these-models-multicollinearity-outlier" class="section level4">
+<h4>What’s wrong with these models?: Multicollinearity &amp; Outlier</h4>
+<p>As seen in Table 1, none of the variables in Models (1) ~ (6) were statistically significant. There are several issues with these models. In particular, the fact that both RDI growth and GDP growth were included as independent variables in models (5) and (6) could have been problematic because the two variables may be correlated. The correlation coefficient between RDI growth and GDP growth was -0.72 (p-value: 4.2e-06). This may seem surprising because in theory, RDI growth and GDP growth should be positively correlated. As seen in Figure 1, the correlation coefficient may have been affected by an outlier: 2020.</p>
+<p>The rest of the observations seem to suggest that there is a positive correlation. Indeed, after discarding the data from 2020, I found that the correlation coefficient was 0.58 (p-value: 8e-04). Because this suggests that there is a risk of multicollinearity, I decided not to include both RDI growth and GDP growth as independent variables in my models. Furthermore, I decided to exclude 2020 from my analysis because the data from 2020 harms the predictive power of the models.</p>
 <div class="figure"><span style="display:block;" id="fig:outlier"></span>
 <img src="{{< blogdown/postref >}}index_files/figure-html/outlier-1.png" alt="GDP Growth vs RDI Growth: Q7-Q8" width="672" />
 <p class="caption">
@@ -27,7 +27,9 @@ Figure 1: GDP Growth vs RDI Growth: Q7-Q8
 </div>
 <div id="predictive-models" class="section level2">
 <h2>Predictive Models</h2>
+<p>Based on these observations, I built 4 predictive models. Whereas in model (A), the independent variable of interest is RDI growth between Q6 and Q7, in Model (B), I replace that with Q6-Q7 GDP growth. In Model (C), I included unemployment in Q7 as an independent variable because incumbent parties tend to be punished for high unemployment, though the effect may differ based on the party in power (Wright, 2012). (Note that while Wright (2012) suggests that higher unemployment is associated with higher vote shares for Democratic candidates, I was not able to identify such a trend when I ran a regression only for the years in which the incumbent President was a Democrat.) In Model (D), I shed light on the impact of cumulative GDP growth rate (between Q1 and Q7). Comparing Model (C) and Model (D) is important because some suggest that while voters do tend to judge incumbent Presidents based on economic conditions in the election year, they actually want to judge incumbent Presidents based on cumulative records (Healy &amp; Lenz, 2014).</p>
 <p><img src="table2.png" /></p>
+<p>As seen in Table 2, Models (B), (C), and (D) seem to be promising. Whereas RDI growth did not have a statistically significant impact, GDP growth between Q6 and Q7 had a statistically positive and significant impact on the President’s Party’s vote share (Model (B)). In addition to GDP growth, unemployment in Q7 had a negative and statistically significant impact (Model (C)). Interestingly, even after replacing short-term (Q6-Q1) GDP growth rate with cumulative (Q1-Q7) GDP growth rate, I found out that GDP growth rate still had a positive and statistically significant impact. Voters may partially take into account the President’s cumulative records even though they tend to judge the President based on the economic conditions in the election year.</p>
 </div>
 <div id="model-testing-and-predictions" class="section level2">
 <h2>Model Testing and Predictions</h2>
@@ -37,16 +39,20 @@ Figure 1: GDP Growth vs RDI Growth: Q7-Q8
 Figure 2: Actual Values vs Predicted Values
 </p>
 </div>
+<p>By comparing the predicted values based on Models (A) ~ (D) with the actual vote share, we can see that Models (C) and (D) tend to better predict the vote share (Figure 2). Indeed, the adjusted R^2 for Models (C) and (D) are higher than the adjusted R^2 for Models (A) and (B). Also, the root-mean-squared error was lower for Models (C) and (D) (See Figure 3 for details).</p>
+<p>I also conducted out-of-sample model testing to evaluate the models. First, for each of the models, I withheld the observation for the 2018 elections before fitting and observed how well the models predict the vote share in 2018. Here, I observed that model B performed the best (Figure 3, “Leave-One-Out”). Second, I conducted 1000 runs of cross-validation for each of the models, randomly holding out 8 observations in each iteration. As seen in the bottom half of Figure 3, the mean out-of-sample residuals tended to be around -1 to 1. The mean out-of-sample residuals based on Model D seemed to best cluster around 0. Overall, Models (C) and (D) seem to have nearly equivalent predictive power, though Model (D) slightly performs better.</p>
 <div class="figure"><span style="display:block;" id="fig:unnamed-chunk-2"></span>
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-2-1.png" alt="Model Testing &amp; Predictions" width="672" />
 <p class="caption">
 Figure 3: Model Testing &amp; Predictions
 </p>
 </div>
-<div id="predictions" class="section level3">
-<h3>Predictions</h3>
-</div>
+<p>Finally, I calculated the predictions for 2022 based on the 4 models. Since the data for Q7 is not available yet, I used the data from Q6 as a substitute. I measured short-term economic growth based on the change between Q6 and Q5 and long-term economic growth based on the change between Q6 and Q1. For all 4 models, the predicted President’s party’s vote share was 46 to 48%. However, since the confidence intervals are wide, it seems that the analysis I did this week is not be enough to accurately predict the outcomes of this election cycle (Figure 3, “2022 Prediction”). Note that there is little difference between Model (C) and Model (D), both in terms of how well they perform in various model evaluation metrics as well as the predicted vote share for 2022. This reinforces my analysis that whether we measure GDP growth based on Q6-Q7 records or on Q1-Q7 records does not make much difference.</p>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
+<p>Achen, C. H. &amp; Bartels, L. M. (2017). <em>Democracy for realists :why elections do not produce responsive government.</em> Princeton University Press.</p>
+<p>Campbell, J. (2018). Introduction: Forecasting the 2018 US Midterm Elections. <em>PS: Political Science &amp; Politics, 51</em>(S1), 1-3. <a href="doi:10.1017/S1049096518001592" class="uri">doi:10.1017/S1049096518001592</a></p>
+<p>Healy, A. &amp; Lenz, G. S. (2014). Substituting the End for the Whole: Why Voters Respond Primarily to the Election-Year Economy. <em>American Journal of Political Science, 58</em>(1), 31–47. <a href="https://doi.org/10.1111/ajps.12053" class="uri">https://doi.org/10.1111/ajps.12053</a></p>
+<p>Wright, J. R. (2012). Unemployment and the Democratic Electoral Advantage. <em>American Political Science Review, 106</em>(4), 685–702. <a href="https://doi.org/10.1017/S0003055412000330" class="uri">https://doi.org/10.1017/S0003055412000330</a></p>
 </div>
