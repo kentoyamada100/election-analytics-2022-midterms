@@ -1,0 +1,260 @@
+---
+title: "02-Economy"
+author: "Kento Yamada"
+date: '2022-09-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
+```
+
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(stargazer)
+```
+
+```{r load data, include = FALSE}
+# Data on GDP/quarter
+gdp_df <- read_csv("analysis_data/GDP_quarterly.csv") %>%
+  select(-c("...1", "...2")) # de-select unnecessary columns
+
+# Data on RDI/quarter
+rdi_df <- read_csv("analysis_data/RDI_quarterly.csv") %>%
+  select(-"...1") # de-select unnecessary column
+
+# Data on unemployment
+unemp_df <- read_csv("analysis_data/unemployment_national_quarterly_final.csv") %>%
+  select(-c("...1", "...2")) # de-select unnecessary columns
+
+# Data on vote/seat share
+share_df <- read_csv("analysis_data/house_popvote_seats.csv") %>%
+  select(-c("...1", "AreaAll")) # de-select unnecessary columns
+```
+
+```{r clean gdp_df, include = FALSE}
+# Select relevant columns
+gdp_df_relevant <- gdp_df %>%
+  select(year, quarter_cycle, GDPC1)
+
+# Filter out data for Q1
+gdp_df_q1 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>% 
+  rename(gdp_q1 = GDPC1) %>%
+  select(-c(quarter_cycle, year))
+
+# Filter out data for Q6
+gdp_df_q6 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q6 = GDPC1, election_year = year)
+
+# Filter out data for Q7
+gdp_df_q7 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q7 = GDPC1, election_year = year)
+
+# Merge and finalize data
+gdp_df_final <- left_join(gdp_df_q7, gdp_df_q6, by = "election_year") %>%
+  left_join(gdp_df_q1, by = "election_year") %>%
+  mutate(gdp_q7_q6 = (gdp_q7 - gdp_q6) / gdp_q6 * 100,
+         gdp_q7_q1 = (gdp_q7 - gdp_q1) / gdp_q1 * 100) %>%
+  select(-c(gdp_q7, gdp_q6, gdp_q1))
+```
+
+```{r clean rdi_df, include = FALSE}
+# Select relevant columns
+rdi_df_relevant <- rdi_df %>%
+  select(year, quarter_cycle, DSPIC_qt)
+
+# Filter out data for Q1
+rdi_df_q1 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>% 
+  rename(rdi_q1 = DSPIC_qt) %>%
+  select(-c(quarter_cycle, year))
+
+# Filter out data for Q6
+rdi_df_q6 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(rdi_q6 = DSPIC_qt, election_year = year)
+
+# Filter out data for Q7
+rdi_df_q7 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(rdi_q7 = DSPIC_qt, election_year = year)
+
+# Merge and finalize data
+rdi_df_final <- left_join(rdi_df_q7, rdi_df_q6, by = "election_year") %>%
+  left_join(rdi_df_q1, by = "election_year") %>%
+  mutate(rdi_q7_q6 = (rdi_q7 - rdi_q6) / rdi_q6 * 100,
+         rdi_q7_q1 = (rdi_q7 - rdi_q1) / rdi_q1 * 100) %>%
+  select(-c(rdi_q7, rdi_q6, rdi_q1))
+```
+
+```{r clean unemp_df, include = FALSE}
+# Select relevant columns
+unemp_df_relevant <- unemp_df %>%
+  select(year, quarter_cycle, UNRATE) %>%
+  rename(unrate = UNRATE) %>%
+  # Fix quarterly cycle 
+  mutate(quarter_cycle = case_when(
+    quarter_cycle == 1 ~ 5,
+    quarter_cycle == 2 ~ 6,
+    quarter_cycle == 3 ~ 7,
+    quarter_cycle == 4 ~ 8,
+    quarter_cycle == 5 ~ 1,
+    quarter_cycle == 6 ~ 2,
+    quarter_cycle == 7 ~ 3,
+    quarter_cycle == 8 ~ 4
+  ))
+
+# Filter out data for Q1
+unemp_df_q1 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>%
+  select(-c(quarter_cycle, year)) %>%
+  rename(unrate_q1 = unrate)
+
+# Filter out data for Q6
+unemp_df_q6 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(election_year = year) %>%
+  rename(unrate_q6 = unrate)
+
+# Filter out data for Q7
+unemp_df_q7 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(election_year = year) %>%
+  rename(unrate_q7 = unrate)
+
+# Merge and finalize data
+unemp_df_final <- left_join(unemp_df_q7, unemp_df_q6, by = "election_year") %>%
+  left_join(unemp_df_q1, by = "election_year") 
+```
+
+
+```{r clean share_df, include = FALSE}
+# Define incumbent President's party affiliation
+share_df_final <- share_df
+# In a Presidential election year, share_df$president_party shows the party 
+# of the candidate who won the Presidential election.
+# Thus, in cases where the party that the incumbent President belongs to
+# loses the Presidential election,
+# share_df$president_party is different from the incumbent President's party
+share_df_final$inc_pres_party <- share_df$president_party
+share_df_final$inc_pres_party[which(share_df_final$year == 1952)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1960)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 1968)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1976)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 1980)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1992)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 2000)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 2008)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 2016)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 2020)] <- "R"
+
+share_df_final <- share_df_final %>%
+  mutate(pp_vote_share = # Two-party vote share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ D_majorvote_pct,
+                     inc_pres_party == "R" ~ R_majorvote_pct),
+         midterm = # Midterm election or not
+           case_when(year %% 4 == 0 ~ FALSE,
+                     year %% 4 == 2 ~ TRUE),
+         pp_seat_share = # Seat share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ D_seats/435,
+                     inc_pres_party == "R" ~ R_seats/435)) %>%
+  select(year, pp_vote_share, midterm, pp_seat_share, inc_pres_party, president_party) %>%
+  rename(election_year = year)
+```
+
+```{r finalize df, include = FALSE}
+df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
+  full_join(unemp_df_final, by = "election_year") %>%
+  full_join(share_df_final, by = "election_year")
+```
+
+
+```{r model 1, include = FALSE}
+model1 <- lm(pp_vote_share ~ rdi_q7_q6, data = df)
+```
+```{r model 2, include = FALSE}
+model2 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df)
+```
+```{r model 3, include = FALSE}
+model3 <- lm(pp_vote_share ~ gdp_q7_q6, data = df)
+```
+```{r model 4, include = FALSE}
+model4 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm, data = df)
+```
+```{r model 5, include = FALSE}
+model5 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm, data = df)
+```
+```{r model 6, include = FALSE}
+model6 <- lm(pp_vote_share ~ rdi_q7_q6 + gdp_q7_q6 + midterm + unrate_q7, data = df)
+```
+
+```{r regression output 1, results = 'asis', echo = FALSE}
+stargazer(model1, model2, model3, model4, model5, model6,
+          type = 'html',
+          style = 'apsr',
+          dep.var.labels   = "President's Party's Vote Share")
+```
+
+
+
+```{r}
+cor.test(df$gdp_q7_q6, df$rdi_q7_q6)
+```
+
+```{r df_2020, include = FALSE}
+# Discard clear outlier
+df_without_2020 <- df[df$election_year != 2020,]
+```
+
+```{r model 1.1, include = FALSE}
+model1.1 <- lm(pp_vote_share ~ rdi_q7_q6, data = df_without_2020)
+```
+```{r model 2.1, include = FALSE}
+model2.1 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm, data = df_without_2020)
+```
+```{r model 3.1, include = FALSE}
+model3.1 <- lm(pp_vote_share ~ gdp_q7_q6, data = df_without_2020)
+```
+```{r model 4.1, include = FALSE}
+model4.1 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm, data = df_without_2020)
+```
+```{r model 7, include = FALSE}
+model7 <- lm(pp_vote_share ~ rdi_q7_q6 + midterm + unrate_q7, data = df_without_2020)
+```
+```{r model 8, include = FALSE}
+model8 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, data = df_without_2020)
+```
+
+```{r regression output 1, results = 'asis', echo = FALSE}
+stargazer(model1.1, model2.1, model3.1, model4.1, model7, model8,
+          type = 'html',
+          style = 'apsr',
+          dep.var.labels   = "President's Party's Vote Share")
+```
+
+
+```{r model 8.d, include = FALSE}
+model8.d <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+               data = df_without_2020 %>% filter(inc_pres_party == "D"))
+```
+```{r model 8.r, include = FALSE}
+model8.r <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+               data = df_without_2020 %>% filter(inc_pres_party == "R"))
+```
+
