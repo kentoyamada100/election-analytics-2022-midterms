@@ -217,7 +217,10 @@ stargazer(model1, model2, model3, model4, model5, model6,
   as_image(file = "content/posts/02-economy/index_files/table1.png")
 ```
 
-!["Table 1: Models of Economic Voting Based on 1948-2020 Data"](content/posts/02-economy/index_files/table1.png)
+```{r table 1, echo = FALSE, fig.align='center', out.width='100%', fig.cap='Models of Economic Voting Based on 1948-2020 Data'}
+knitr::include_graphics("content/posts/02-economy/index_files/table1.png")
+```
+
 
 
 ```{r correlation test, include = FALSE}
