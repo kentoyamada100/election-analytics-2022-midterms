@@ -1,0 +1,495 @@
+---
+title: "03-Polling"
+author: "Kento Yamada"
+date: '2022-09-24'
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
+```
+
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(stargazer)
+library(kableExtra)
+library(gt)
+```
+
+```{r load data, include = FALSE}
+# Data on GDP/quarter
+gdp_df <- read_csv("analysis_data/GDP_quarterly.csv") %>%
+  select(-c("...1", "...2")) # de-select unnecessary columns
+
+# Data on RDI/quarter
+rdi_df <- read_csv("analysis_data/RDI_quarterly.csv") %>%
+  select(-"...1") # de-select unnecessary column
+
+# Data on unemployment
+unemp_df <- read_csv("analysis_data/unemployment_national_quarterly_final.csv") %>%
+  select(-c("...1", "...2")) # de-select unnecessary columns
+
+# Data on vote/seat share
+share_df <- read_csv("analysis_data/house_popvote_seats.csv") %>%
+  select(-c("...1", "AreaAll")) # de-select unnecessary columns
+```
+
+```{r clean gdp_df, include = FALSE}
+# Select relevant columns
+gdp_df_relevant <- gdp_df %>%
+  select(year, quarter_cycle, GDPC1)
+
+# Filter out data for Q1
+gdp_df_q1 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>% 
+  rename(gdp_q1 = GDPC1) %>%
+  select(-c(quarter_cycle, year))
+
+# Filter out data for Q6
+gdp_df_q6 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q6 = GDPC1, election_year = year)
+
+# Filter out data for Q7
+gdp_df_q7 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q7 = GDPC1, election_year = year)
+
+# Merge and finalize data
+gdp_df_final <- left_join(gdp_df_q7, gdp_df_q6, by = "election_year") %>%
+  left_join(gdp_df_q1, by = "election_year") %>%
+  mutate(gdp_q7_q6 = (gdp_q7 - gdp_q6) / gdp_q6 * 100,
+         gdp_q7_q1 = (gdp_q7 - gdp_q1) / gdp_q1 * 100) %>%
+  select(-c(gdp_q7, gdp_q6, gdp_q1))
+```
+
+```{r clean rdi_df, include = FALSE}
+# Select relevant columns
+rdi_df_relevant <- rdi_df %>%
+  select(year, quarter_cycle, DSPIC_qt)
+
+# Filter out data for Q1
+rdi_df_q1 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>% 
+  rename(rdi_q1 = DSPIC_qt) %>%
+  select(-c(quarter_cycle, year))
+
+# Filter out data for Q6
+rdi_df_q6 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(rdi_q6 = DSPIC_qt, election_year = year)
+
+# Filter out data for Q7
+rdi_df_q7 <- rdi_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(rdi_q7 = DSPIC_qt, election_year = year)
+
+# Merge and finalize data
+rdi_df_final <- left_join(rdi_df_q7, rdi_df_q6, by = "election_year") %>%
+  left_join(rdi_df_q1, by = "election_year") %>%
+  mutate(rdi_q7_q6 = (rdi_q7 - rdi_q6) / rdi_q6 * 100,
+         rdi_q7_q1 = (rdi_q7 - rdi_q1) / rdi_q1 * 100) %>%
+  select(-c(rdi_q7, rdi_q6, rdi_q1))
+```
+
+```{r clean unemp_df, include = FALSE}
+# Select relevant columns
+unemp_df_relevant <- unemp_df %>%
+  select(year, quarter_cycle, UNRATE) %>%
+  rename(unrate = UNRATE) %>%
+  # Fix quarterly cycle 
+  mutate(quarter_cycle = case_when(
+    quarter_cycle == 1 ~ 5,
+    quarter_cycle == 2 ~ 6,
+    quarter_cycle == 3 ~ 7,
+    quarter_cycle == 4 ~ 8,
+    quarter_cycle == 5 ~ 1,
+    quarter_cycle == 6 ~ 2,
+    quarter_cycle == 7 ~ 3,
+    quarter_cycle == 8 ~ 4
+  ))
+
+# Filter out data for Q1
+unemp_df_q1 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>%
+  select(-c(quarter_cycle, year)) %>%
+  rename(unrate_q1 = unrate)
+
+# Filter out data for Q6
+unemp_df_q6 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(election_year = year) %>%
+  rename(unrate_q6 = unrate)
+
+# Filter out data for Q7
+unemp_df_q7 <- unemp_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(election_year = year) %>%
+  rename(unrate_q7 = unrate)
+
+# Merge and finalize data
+unemp_df_final <- left_join(unemp_df_q7, unemp_df_q6, by = "election_year") %>%
+  left_join(unemp_df_q1, by = "election_year") 
+```
+
+```{r clean share_df, include = FALSE}
+# Define incumbent President's party affiliation
+share_df_final <- share_df
+# In a Presidential election year, share_df$president_party shows the party 
+# of the candidate who won the Presidential election.
+# Thus, in cases where the party that the incumbent President belongs to
+# loses the Presidential election,
+# share_df$president_party is different from the incumbent President's party
+share_df_final$inc_pres_party <- share_df$president_party
+share_df_final$inc_pres_party[which(share_df_final$year == 1952)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1960)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 1968)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1976)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 1980)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 1992)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 2000)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 2008)] <- "R"
+share_df_final$inc_pres_party[which(share_df_final$year == 2016)] <- "D"
+share_df_final$inc_pres_party[which(share_df_final$year == 2020)] <- "R"
+
+share_df_final <- share_df_final %>%
+  mutate(pp_vote_share = # Two-party vote share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ D_majorvote_pct,
+                     inc_pres_party == "R" ~ R_majorvote_pct),
+         midterm = # Midterm election or not
+           case_when(year %% 4 == 0 ~ FALSE,
+                     year %% 4 == 2 ~ TRUE),
+         pp_seat_share = # Seat share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ D_seats/435,
+                     inc_pres_party == "R" ~ R_seats/435)) %>%
+  # Calculate incumbent President's vote/seat share in the previous election
+  mutate(pp_prev_vote_share = lag(pp_vote_share),
+         pp_prev_seat_share = lag(pp_seat_share)) %>%
+  select(year, pp_vote_share, midterm, pp_seat_share, inc_pres_party, president_party,
+         pp_prev_vote_share, pp_prev_seat_share) %>%
+  rename(election_year = year)
+```
+
+```{r load new data, include = FALSE}
+poll_df <- read_csv("analysis_data/GenericPolls1942_2020.csv")
+```
+
+```{r clean poll_df, include = FALSE }
+poll_df <- poll_df %>%
+  # Filter out election year and discard polls conducted after election
+  filter(year %% 2 == 0) %>%
+  filter(days_until_election > 0, days_until_election < 365) %>%
+  select(year, emonth, eday, dem, rep, days_until_election) %>%
+  rename(dem_poll = dem, rep_poll = rep) %>%
+  # add weights
+  mutate(recency = 365 - days_until_election)
+```
+
+```{r poll_df_final, include = FALSE}
+poll_df_final <- poll_df %>%
+  # calculate weighted average
+  group_by(year) %>%
+  summarize(dem_poll_weighted = weighted.mean(dem_poll, recency),
+            rep_poll_weighted = weighted.mean(rep_poll, recency)) %>%
+  rename(election_year = year)
+```
+
+```{r finalize df, include = FALSE}
+df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
+  full_join(unemp_df_final, by = "election_year") %>%
+  full_join(share_df_final, by = "election_year") %>%
+  full_join(poll_df_final, by = "election_year")
+
+# Calculate polling data for President's party
+df <- df %>%
+  mutate(pp_generic_ballot= # Two-party vote share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ dem_poll_weighted,
+                     inc_pres_party == "R" ~ rep_poll_weighted))
+```
+
+```{r df_2020, include = FALSE}
+# Discard 2020
+df_without_2020 <- df[df$election_year != 2020,]
+```
+
+## Pollster Quality
+```{r download fivethirtyeight pollster rating data, include = FALSE}
+# Read in data
+pollster_ratings <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/pollster-ratings/2020/pollster-ratings.csv")
+# Save data
+write.csv(pollster_ratings, file = "analysis_data/pollster_ratings.csv")
+```
+
+```{r 538 pollster ratings, include = FALSE}
+pollster_ratings_df <- pollster_ratings %>%
+  group_by(X538.Grade) %>%
+  summarize(count = n(),
+            Races.Called.Correctly = mean(as.numeric(gsub("%", "", Races.Called.Correctly)))/100, 
+            Simple.Average.Error = mean(Simple.Average.Error))
+
+colnames(pollster_ratings_df) <- c("Rating", "Count", "Races Called Correctly", "Simple Average Error")
+
+# Order: "A"   "A-"  "A/B" "A+"  "B"   "B-"  "B/C" "B+"  "C"   "C-"  "C/D" "C+"  "D-"  "D+"  "F"
+pollster_ratings_df$Pollster <- 
+  c("Survey USA, Suffolk University, CBS/NYT", #A
+    "Emerson College, Siena College, Fox/Beacon/Shaw", #A-
+    "University of Cincinnati (Ohio), LA Times, Georgetown University (Battleground)", #A/B
+    "Marist College, Monmouth University, ABC/Washington Post", #A+
+    "Public Policy Polling, YouGov, American Research Group", #B
+    "Opinion Savvy/InsiderAdvantage, University of NH, Ipsos", #B-
+    "RT Strategies, Tarrance Group, Pew Research Center", #B/C
+    "Mason-Dixon, Quinnipiac University, CNN/Opinion Research Group", #B+
+    "Harris Insights & Analytics, Gravis Marketing, We Ask America", #C
+    "Mitchell Research & Communications, Change Research, Trafalgar Group", #C-
+    "ccAdvertising, McLaughlin & Associates, Critical Insights", #C/D
+    "Rasmussen Reports/Pulse Opinion Research, Zogby Interactive/JZ Analytics", #C+
+    "SurveyMonkey, Swayable", #D-
+    "Lucid, Google Surveys", #D+
+    "Research 2000, Strategic Vision LLC, TCJ Research") #F
+
+ratings_list <- c("A+", "A", "A-", "A/B", "B+", "B", "B-", "B/C", "C+", "C", "C-", "C/D",  "D+",  "D-", "F")
+```
+
+```{r include = FALSE}
+pollster_ratings %>%
+  filter(X538.Grade == "F") %>%
+  arrange(desc(X..of.Polls))
+```
+
+```{r}
+pollster_ratings_df %>%
+  mutate(Rating = factor(Rating, levels = ratings_list)) %>%
+  arrange(Rating) %>%
+  gt() %>%
+  tab_header(title = "Table 1: Variation in Pollster Ratings (FiveThirtyEight)") %>%
+  fmt_number(columns = 3:4, decimals = 2)
+```
+
+
+## The Generic Ballot
+
+## Models
+
+```{r test correlation, include = FALSE}
+cor.test(df_without_2020$gdp_q7_q6, df_without_2020$rdi_q7_q6)
+cor.test(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7)
+cor.test(df_without_2020$rdi_q7_q6, df_without_2020$unrate_q7)
+```
+
+```{r models, include = FALSE}
+model1 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7, 
+             data = df_without_2020)
+model2 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7 + 
+               pp_generic_ballot, 
+             data = df_without_2020)
+model3 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7 + 
+               pp_prev_vote_share, 
+             data = df_without_2020)
+model4 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7 + 
+               pp_prev_vote_share + pp_generic_ballot, 
+             data = df_without_2020)
+model5 <- lm(pp_vote_share ~ midterm + pp_generic_ballot, 
+             data = df_without_2020)
+```
+
+```{r regression output 1, include = FALSE}
+stargazer(model1, model2, model3, model4, model5,
+          type = 'html',
+          title = "Table 2: Models of Economic Voting Based on 1948-2018 Data",
+          dep.var.labels = "President's Party's Vote Share",
+          covariate.labels = c('GDP Q6-Q7', 'Midterm', 'Unemployment Q7', 
+                               'Generic Ballot', 'Previous Vote Share'),
+          column.sep.width = "5pt") %>%
+  save_kable(file = "static/posts/03-polling/table1.png",
+             zoom = 2.5)
+```
+
+```{r include table, include = FALSE}
+blogdown::build_dir("static")
+```
+
+![](table1.png)
+
+```{r economy vs generic ballot, include = FALSE}
+gdp_gb_test_1 <- cor.test(df_without_2020$gdp_q7_q6, df_without_2020$pp_generic_ballot)
+gdp_gb_test_2 <- cor.test(df_without_2020$gdp_q7_q1, df_without_2020$pp_generic_ballot)
+```
+
+`r round(gdp_gb_test_1$estimate, 2)` (p-value: `r format(gdp_gb_test_1$p.value, scientific = TRUE, digits = 2)`
+
+`r round(gdp_gb_test_2$estimate, 2)` (p-value: `r format(gdp_gb_test_2$p.value, scientific = TRUE, digits = 2)`
+
+## Model Testing
+
+```{r, echo = FALSE, fig.cap = "Actual Values vs Predicted Values"}
+plot(df$election_year, df$pp_vote_share,
+     type = "l",
+     xlab = "Year", ylab = "President's Party's Vote Share")
+
+# Predicted values based on Model 1
+lines(df_without_2020$election_year[complete.cases(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7)], # remove observations with NA's
+       predict(model1, df_without_2020)[complete.cases(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7)], 
+      col = "red", lty = "dotted") 
+
+# Predicted values based on Model 2
+lines(df_without_2020$election_year[complete.cases(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7, df_without_2020$pp_generic_ballot)], 
+       predict(model2, df_without_2020)[complete.cases(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7, df_without_2020$pp_generic_ballot)],
+      col = "blue") 
+
+# Predicted values based on Model 5
+lines(df_without_2020$election_year[complete.cases(df_without_2020$pp_generic_ballot)], 
+       predict(model5, df_without_2020)[complete.cases(df_without_2020$pp_generic_ballot)],  
+      col = "green")
+
+# Add legend
+legend(1987, 57, legend=c("Model 1: Economy", "Model 2: Economy + Generic Ballot", "Model 5: Generic Ballot"),
+       col=c("red", "blue", "green"), 
+       lty= c(3, 1, 1), cex = 0.7)
+```
+
+```{r RMSE, include = FALSE}
+# Square prediction errors, take mean, then take square root
+rmse_model1 <- (model1$model$pp_vote_share - model1$fitted.values)^2 %>%
+  mean() %>% sqrt()
+rmse_model2 <- (model2$model$pp_vote_share - model2$fitted.values)^2 %>%
+  mean() %>% sqrt()
+rmse_model5 <- (model5$model$pp_vote_share - model5$fitted.values)^2 %>%
+  mean() %>% sqrt()
+```
+
+```{r cross validation Model 2, include = FALSE}
+set.seed(12345)
+cv_model2_error <- 
+  sapply(1:1000, function(i){
+    # Randomly hold out 8 observations
+    years_outsamp <- sample(df_without_2020$election_year[complete.cases(df_without_2020$gdp_q7_q6, df_without_2020$unrate_q7, df_without_2020$pp_generic_ballot)], 8) 
+      #De-select years with missing values
+    
+    # Run linear regression based on the remaining observations
+    outsamp_mod <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + unrate_q7 + 
+    pp_generic_ballot,
+                    df_without_2020[!(df_without_2020$election_year %in% years_outsamp),])
+    
+    # Make predictions based on the model
+    outsamp_pred <- predict(outsamp_mod,
+                          df_without_2020[df_without_2020$election_year %in% years_outsamp,])
+    
+    # True values
+    outsamp_true <- df_without_2020$pp_vote_share[df_without_2020$election_year 
+                                                       %in% years_outsamp]
+    
+    mean(outsamp_pred - outsamp_true)
+})
+```
+
+```{r mean out-of-sample residual plot, include = FALSE}
+# Plot mean out-of-sample residual
+tibble(residual = cv_model2_error) %>%
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
+  labs(title = "Mean Out−of−Sample Residual: Model 2",
+       x = "Residual") +
+  theme_bw()
+```
+
+## Predictions
+```{r load 2022 generic ballot data, include = FALSE}
+recent_generic_df <- read_csv("analysis_data/538_generic_poll_2022.csv")
+# subtract end date
+```
+
+```{r clean 2022 generic ballot data, include = FALSE}
+recent_generic_df <- recent_generic_df %>%
+  select(enddate, adjusted_dem, adjusted_rep) %>%
+  mutate(enddate = as.Date(enddate, "%m/%d/%y")) %>%
+  mutate(days_until_election = round(difftime("2022-11-8", enddate, units = "days"))) %>%
+  # Filter out 2020
+  filter(enddate >= "2022-01-01") %>%
+  rename(dem_poll = adjusted_dem, rep_poll = adjusted_rep) %>%
+  # add weights
+  mutate(recency = as.numeric(365 - days_until_election))
+```
+
+```{r recent_generic_df, include = FALSE}
+recent_generic_final <- recent_generic_df %>%
+  # calculate weighted average
+  summarize(dem_poll_weighted = weighted.mean(dem_poll, recency),
+            rep_poll_weighted = weighted.mean(rep_poll, recency))
+```
+
+```{r predictions, include = FALSE}
+# Get data for 2022
+latest_data <- 
+  data.frame(midterm = TRUE, 
+             gdp_q7_q6 =
+               # Data for Q7 is not available yet -> Calculate Q6-Q5
+               # GDP in the Q2 of 2022 (i.e. Q6)
+               (gdp_df_relevant$GDPC1[gdp_df_relevant$year == 2022][2] -
+               # GDP in the Q1 of 2022 (i.e. Q5)
+               gdp_df_relevant$GDPC1[gdp_df_relevant$year == 2022][1])/
+               gdp_df_relevant$GDPC1[gdp_df_relevant$year == 2022][1],
+             unrate_q7 =
+               # Data for Q7 is not available yet -> Use Q6 data
+               unemp_df_relevant$unrate[unemp_df_relevant$year == 2022][2],
+             pp_generic_ballot = recent_generic_final$dem_poll_weighted)
+```
+
+```{r make predictions, include = FALSE}
+model1_pred <- predict(model1, latest_data, interval = "prediction")
+model2_pred <- predict(model2, latest_data, interval = "prediction")
+model5_pred <- predict(model5, latest_data, interval = "prediction")
+```
+
+```{r model evaluation and prediction, include = FALSE}
+model_eval <- as.data.frame(
+  matrix(
+    c("1", summary(model1)$r.squared, rmse_model1, model1_pred,
+      "2", summary(model2)$r.squared, rmse_model2, model2_pred,
+      "5", summary(model5)$r.squared, rmse_model5, model5_pred),
+    ncol = 6, byrow = TRUE))
+# Label columns
+names(model_eval) <- c("Model", "R-squared", "RMSE", 
+                       "Fitted", 
+                       "Lower", 
+                       "Upper")
+# Convert to numeric
+model_eval[,2] <- as.numeric(model_eval[,2])
+model_eval[,3] <- as.numeric(model_eval[,3])
+model_eval[,4] <- as.numeric(model_eval[,4])
+model_eval[,5] <- as.numeric(model_eval[,5])
+model_eval[,6] <- as.numeric(model_eval[,6])
+
+# Limit to 4 digits
+model_eval <- mutate_if(model_eval, is.numeric, format, digits= 4) 
+```
+
+```{r make table}
+# Plot table
+table3 <- gt(model_eval) %>%
+  tab_header(title = "Table 3: Model Testing and Prediction for 2022") %>%
+  tab_spanner(
+    label = "Model Evaluation",
+    columns = 2:3
+  ) %>%   
+  tab_spanner(
+    label = "Predictions",
+    columns = 4:6
+  )
+```
+
+
+## References
+
+
