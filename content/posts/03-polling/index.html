@@ -9,18 +9,15 @@ output: html_document
 
 <div id="pollster-quality" class="section level2">
 <h2>Pollster Quality</h2>
-<pre class="r"><code>pollster_ratings_df %&gt;%
-  mutate(Rating = factor(Rating, levels = ratings_list)) %&gt;%
-  arrange(Rating) %&gt;%
-  gt() %&gt;%
-  tab_header(title = &quot;Table 1: Variation in Pollster Ratings (FiveThirtyEight)&quot;) %&gt;%
-  fmt_number(columns = 3:4, decimals = 2)</code></pre>
-<div id="atqoqsgvao" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<p>Table 1 shows the ratings of pollsters determined by FiveThirtyEight.
+When determining the ratings, FiveThirtyEight takes into account factors such as how accurate each pollster has been in the past, whether the poll is partisan, how a pollsters’ forecast compared against other polls, and the extent to which pollsters are influenced by other pollsters (Silver, 2014).</p>
+<p>As seen in Table 1, pollsters with high ratings tend to have the simple average error, or the difference between the poll and the actual election result. Note that the magnitude of the simple average error does not perfectly correlate with the ratings and that FiveThirtyEight uses other metrics of errors such as the difference between the poll’s average error and the predicted magnitude of the error based on factors such as the type of the election and the number of days the poll was conducted before the election (Silver, 2014)</p>
+<div id="idyjcytkmd" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#atqoqsgvao .gt_table {
+#idyjcytkmd .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -45,7 +42,7 @@ output: html_document
   border-left-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_heading {
+#idyjcytkmd .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -57,7 +54,7 @@ output: html_document
   border-right-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_title {
+#idyjcytkmd .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -69,7 +66,7 @@ output: html_document
   border-bottom-width: 0;
 }
 
-#atqoqsgvao .gt_subtitle {
+#idyjcytkmd .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -81,13 +78,13 @@ output: html_document
   border-top-width: 0;
 }
 
-#atqoqsgvao .gt_bottom_border {
+#idyjcytkmd .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_col_headings {
+#idyjcytkmd .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -102,7 +99,7 @@ output: html_document
   border-right-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_col_heading {
+#idyjcytkmd .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -122,7 +119,7 @@ output: html_document
   overflow-x: hidden;
 }
 
-#atqoqsgvao .gt_column_spanner_outer {
+#idyjcytkmd .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -134,15 +131,15 @@ output: html_document
   padding-right: 4px;
 }
 
-#atqoqsgvao .gt_column_spanner_outer:first-child {
+#idyjcytkmd .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#atqoqsgvao .gt_column_spanner_outer:last-child {
+#idyjcytkmd .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#atqoqsgvao .gt_column_spanner {
+#idyjcytkmd .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -154,7 +151,7 @@ output: html_document
   width: 100%;
 }
 
-#atqoqsgvao .gt_group_heading {
+#idyjcytkmd .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -179,7 +176,7 @@ output: html_document
   vertical-align: middle;
 }
 
-#atqoqsgvao .gt_empty_group_heading {
+#idyjcytkmd .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -194,15 +191,15 @@ output: html_document
   vertical-align: middle;
 }
 
-#atqoqsgvao .gt_from_md > :first-child {
+#idyjcytkmd .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#atqoqsgvao .gt_from_md > :last-child {
+#idyjcytkmd .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#atqoqsgvao .gt_row {
+#idyjcytkmd .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -221,7 +218,7 @@ output: html_document
   overflow-x: hidden;
 }
 
-#atqoqsgvao .gt_stub {
+#idyjcytkmd .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -234,7 +231,7 @@ output: html_document
   padding-right: 5px;
 }
 
-#atqoqsgvao .gt_stub_row_group {
+#idyjcytkmd .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -248,11 +245,11 @@ output: html_document
   vertical-align: top;
 }
 
-#atqoqsgvao .gt_row_group_first td {
+#idyjcytkmd .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#atqoqsgvao .gt_summary_row {
+#idyjcytkmd .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -262,16 +259,16 @@ output: html_document
   padding-right: 5px;
 }
 
-#atqoqsgvao .gt_first_summary_row {
+#idyjcytkmd .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_first_summary_row.thick {
+#idyjcytkmd .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#atqoqsgvao .gt_last_summary_row {
+#idyjcytkmd .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -281,7 +278,7 @@ output: html_document
   border-bottom-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_grand_summary_row {
+#idyjcytkmd .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -291,7 +288,7 @@ output: html_document
   padding-right: 5px;
 }
 
-#atqoqsgvao .gt_first_grand_summary_row {
+#idyjcytkmd .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -301,11 +298,11 @@ output: html_document
   border-top-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_striped {
+#idyjcytkmd .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#atqoqsgvao .gt_table_body {
+#idyjcytkmd .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -314,7 +311,7 @@ output: html_document
   border-bottom-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_footnotes {
+#idyjcytkmd .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -328,7 +325,7 @@ output: html_document
   border-right-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_footnote {
+#idyjcytkmd .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-left: 4px;
@@ -337,7 +334,7 @@ output: html_document
   padding-right: 5px;
 }
 
-#atqoqsgvao .gt_sourcenotes {
+#idyjcytkmd .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -351,7 +348,7 @@ output: html_document
   border-right-color: #D3D3D3;
 }
 
-#atqoqsgvao .gt_sourcenote {
+#idyjcytkmd .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -359,64 +356,64 @@ output: html_document
   padding-right: 5px;
 }
 
-#atqoqsgvao .gt_left {
+#idyjcytkmd .gt_left {
   text-align: left;
 }
 
-#atqoqsgvao .gt_center {
+#idyjcytkmd .gt_center {
   text-align: center;
 }
 
-#atqoqsgvao .gt_right {
+#idyjcytkmd .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#atqoqsgvao .gt_font_normal {
+#idyjcytkmd .gt_font_normal {
   font-weight: normal;
 }
 
-#atqoqsgvao .gt_font_bold {
+#idyjcytkmd .gt_font_bold {
   font-weight: bold;
 }
 
-#atqoqsgvao .gt_font_italic {
+#idyjcytkmd .gt_font_italic {
   font-style: italic;
 }
 
-#atqoqsgvao .gt_super {
+#idyjcytkmd .gt_super {
   font-size: 65%;
 }
 
-#atqoqsgvao .gt_footnote_marks {
+#idyjcytkmd .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#atqoqsgvao .gt_asterisk {
+#idyjcytkmd .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#atqoqsgvao .gt_indent_1 {
+#idyjcytkmd .gt_indent_1 {
   text-indent: 5px;
 }
 
-#atqoqsgvao .gt_indent_2 {
+#idyjcytkmd .gt_indent_2 {
   text-indent: 10px;
 }
 
-#atqoqsgvao .gt_indent_3 {
+#idyjcytkmd .gt_indent_3 {
   text-indent: 15px;
 }
 
-#atqoqsgvao .gt_indent_4 {
+#idyjcytkmd .gt_indent_4 {
   text-indent: 20px;
 }
 
-#atqoqsgvao .gt_indent_5 {
+#idyjcytkmd .gt_indent_5 {
   text-indent: 25px;
 }
 </style>
@@ -520,36 +517,493 @@ output: html_document
 </div>
 <div id="the-generic-ballot" class="section level2">
 <h2>The Generic Ballot</h2>
+<p>Past studies have suggested that when combined few other basic variables, the generic ballot can help predict the outcomes of House elections. Prior to the 2018 midterm elections, Abramowitz (2018) used a simple model with three variables (the generic ballot, the President’s party, and the number of seats that each party holds before the election) and predicted that if Democrats maintained their early lead in the generic ballot, they would gain about 30 seats. In reality, the Democrats gained 41 seats. Similarly, based on the generic ballot and the fact that the incumbent president was a Republican Bafumi et al. (2018) predicted that Democrats would gain 53.6% of the two-party vote. In fact, the Democrats won 54.4% of the two-party vote.</p>
+<p>Considering the fact that the generic ballot has proven to be a decent predictor of House elections, this week, I will include in the model the results of the generic ballots conducted in election years. Note that I dropped the results of generic polls conducted prior to election years (i.e. odd-numbered years) since polls tend to converge to a point close to the actual outcome only right before the election (Gelman &amp; King, 1993). For the same reason, I decided to calculate the weighted average of generic polls, giving more weights to polls were conducted near election day. The weights assigned to each poll is 365 – number of days the poll was conducted before election day.</p>
+<p>Ideally, we should also take into how reliable each poll is. Indeed, in addition to the polls’ recency, the FiveThirtyEight weighs polls based on the sample size as well as the pollster rating, and it uses an algorithm to determine the exact magnitude of the weights (Silver, 2022). Unfortunately, I did not take into account those factors partly because the data includes polls that were conducted in the 1940s, which makes it difficult to pin down the reliability of the polls. This is one major limitation of my model.</p>
 </div>
 <div id="models" class="section level2">
 <h2>Models</h2>
+<p>In Table 2, I compare the model from last week that only took into account economic variables with models that take into account the generic ballot. Model (1) is the same as Model (C) from last week’s blog, and the variables are gross domestic product (GDP) growth between Q6 and Q7, unemployment in Q7, and whether the election is a midterm election. In Model (2), I also take into account the generic ballot. Inspired by Abramowitz (2018), in Models (3) and (4), I include the President’s party’s vote share in the previous election. Lastly, in model (5), I attempt to predict the President’s party’s vote share exclusively based on the generic ballot as well as whether the election is a midterm election.</p>
+<p>Not surprisingly, the generic ballot seems to be a significant predictor of the President’s party’s vote share, as seen in Model (2). Comparing model (1) with model (2), we can see that the adjusted R-squared drastically increased from 0.197 to 0.654. Interestingly, the adjusted R-squared is even higher for Model (5), the model that excludes economic variables, which suggests that the generic ballot alone is a strong predictor of electoral outcomes. Model (3) and model (4) suggest that the President’s party’s vote share in the previous election is not a significant variable.</p>
+<p>Does Model (5) suggest that the economic variables do not matter? I would argue otherwise. I believe that people’s perceptions of the economy affect the generic ballot, which in turn affects the vote share. Indeed, there is a positive correlation between GDP (Q7-Q6 growth) and the generic ballot.</p>
 <p><img src="table1.png" /></p>
-<p>0.36 (p-value: 3.1e-02</p>
+<p>(Correlation coeffcient: 0.36, p-value: 3.1e-02</p>
 <p>0.47 (p-value: 3.6e-03</p>
 </div>
 <div id="model-testing" class="section level2">
 <h2>Model Testing</h2>
-<div class="figure"><span style="display:block;" id="fig:unnamed-chunk-3"></span>
-<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-3-1.png" alt="Actual Values vs Predicted Values" width="672" />
+<p>Models (2) and (5), which take into account the generic ballot, clearly seem to fit the data better than Model (1), which take into account economic variables. As seen in Figure 1, compared with Model (1), the predicted values based on Models (2) and (5) seem to more close to the actual values. The Root-Mean-Squared-Error (RMSE) of Model (1) is 2.932, while RMSE of Models (2) and (5) are 1.893 and 1.927, respectively (Table 3).
+As seen in Figure 2, when I ran 1000 runs of cross-validation by randomly holding out 8 observations in each iteration, I observed that the mean out-of-sample residuals tend to cluster around -1 to 1.</p>
+<div class="figure"><span style="display:block;" id="fig:unnamed-chunk-2"></span>
+<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-2-1.png" alt="Actual Values vs Predicted Values" width="672" />
 <p class="caption">
 Figure 1: Actual Values vs Predicted Values
 </p>
 </div>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/mean%20out-of-sample%20residual%20plot-1.png" width="672" /></p>
 </div>
-<div id="predictions" class="section level2">
-<h2>Predictions</h2>
-<pre class="r"><code># Plot table
-table3 &lt;- gt(model_eval) %&gt;%
-  tab_header(title = &quot;Table 3: Model Testing and Prediction for 2022&quot;) %&gt;%
-  tab_spanner(
-    label = &quot;Model Evaluation&quot;,
-    columns = 2:3
-  ) %&gt;%   
-  tab_spanner(
-    label = &quot;Predictions&quot;,
-    columns = 4:6
-  )</code></pre>
+<div id="prediction" class="section level2">
+<h2>Prediction</h2>
+<p>Latest data shows that Democrats and Republicans are neck and neck in terms of their performance in generic ballots, with Democrats gaining about 43.7% and Republicans gaining about 44.0%. Note that the averages are weighted based on the recency of the polls. Based on this information as well as the economic variables that I used in last week’s blog post, Model (2) suggests that Democrats will gain about 43.88% of the popular vote cast for the two major parties. Model (5) predicts similar outcomes, and both Models (2) and (5) seem to predict a more favorable outcome for Democrats. Note that the 95% confidence intervals of the models are quite large, reflecting the limitations of these models.</p>
+<div id="vkckbcjepj" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#vkckbcjepj .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#vkckbcjepj .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#vkckbcjepj .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#vkckbcjepj .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#vkckbcjepj .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#vkckbcjepj .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#vkckbcjepj .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#vkckbcjepj .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#vkckbcjepj .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#vkckbcjepj .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#vkckbcjepj .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#vkckbcjepj .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#vkckbcjepj .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vkckbcjepj .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#vkckbcjepj .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#vkckbcjepj .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vkckbcjepj .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#vkckbcjepj .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vkckbcjepj .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#vkckbcjepj .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-left: 4px;
+  padding-right: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vkckbcjepj .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#vkckbcjepj .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#vkckbcjepj .gt_left {
+  text-align: left;
+}
+
+#vkckbcjepj .gt_center {
+  text-align: center;
+}
+
+#vkckbcjepj .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#vkckbcjepj .gt_font_normal {
+  font-weight: normal;
+}
+
+#vkckbcjepj .gt_font_bold {
+  font-weight: bold;
+}
+
+#vkckbcjepj .gt_font_italic {
+  font-style: italic;
+}
+
+#vkckbcjepj .gt_super {
+  font-size: 65%;
+}
+
+#vkckbcjepj .gt_footnote_marks {
+  font-style: italic;
+  font-weight: normal;
+  font-size: 75%;
+  vertical-align: 0.4em;
+}
+
+#vkckbcjepj .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#vkckbcjepj .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#vkckbcjepj .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#vkckbcjepj .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#vkckbcjepj .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#vkckbcjepj .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+<table class="gt_table">
+  <thead class="gt_header">
+    <tr>
+      <td colspan="6" class="gt_heading gt_title gt_font_normal gt_bottom_border" style>Table 3: Model Testing and Prediction for 2022</td>
+    </tr>
+    
+  </thead>
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="2" colspan="1" scope="col">Model</th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="2" scope="colgroup">
+        <span class="gt_column_spanner">Model Evaluation</span>
+      </th>
+      <th class="gt_center gt_columns_top_border gt_column_spanner_outer" rowspan="1" colspan="3" scope="colgroup">
+        <span class="gt_column_spanner">Predictions</span>
+      </th>
+    </tr>
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Adjusted R-squared</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">RMSE</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Fitted</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Lower</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col">Upper</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td class="gt_row gt_right">1</td>
+<td class="gt_row gt_right">2.932</td>
+<td class="gt_row gt_right">47.85</td>
+<td class="gt_row gt_right">41.02</td>
+<td class="gt_row gt_right">54.68</td>
+<td class="gt_row gt_right">2</td></tr>
+    <tr><td class="gt_row gt_right">0.654495541521497</td>
+<td class="gt_row gt_right">1.893</td>
+<td class="gt_row gt_right">48.37</td>
+<td class="gt_row gt_right">43.88</td>
+<td class="gt_row gt_right">52.86</td>
+<td class="gt_row gt_right">5</td></tr>
+    <tr><td class="gt_row gt_right">0.663639204449082</td>
+<td class="gt_row gt_right">1.927</td>
+<td class="gt_row gt_right">48.13</td>
+<td class="gt_row gt_right">43.92</td>
+<td class="gt_row gt_right">52.34</td>
+<td class="gt_row gt_right">1</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
 </div>
 <div id="references" class="section level2">
 <h2>References</h2>
+<p>Abramowitz, A. (2018). Will Democrats Catch a Wave? The Generic Ballot Model and the 2018 US House Elections. <em>PS: Political Science &amp; Politics, 51</em>(S1), 4-6. <a href="doi:10.1017/S1049096518001567" class="uri">doi:10.1017/S1049096518001567</a></p>
+<p>Bafumi, J., Erikson, R., &amp; Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. <em>PS: Political Science &amp; Politics, 51</em>(S1), 7-11. <a href="doi:10.1017/S1049096518001579" class="uri">doi:10.1017/S1049096518001579</a></p>
+<p>Gelman, A., &amp; King, G. (1993). Why Are American Presidential Election Campaign Polls So Variable When Votes Are So Predictable? <em>British Journal of Political Science, 23</em>(4), 409–451. <a href="https://doi.org/10.1017/S0007123400006682" class="uri">https://doi.org/10.1017/S0007123400006682</a></p>
+<p>Silver, N. (2014, September 25). How FiveThirtyEight calculates pollster ratings. <em>FiveThirtyEight.</em> <a href="https://fivethirtyeight.com/features/how-fivethirtyeight-calculates-pollster-ratings/" class="uri">https://fivethirtyeight.com/features/how-fivethirtyeight-calculates-pollster-ratings/</a></p>
 </div>

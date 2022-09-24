@@ -226,6 +226,17 @@ df_without_2020 <- df[df$election_year != 2020,]
 ```
 
 ## Pollster Quality
+
+Table 1 shows the ratings of pollsters determined by FiveThirtyEight. 
+When determining the ratings, FiveThirtyEight takes into account factors such as how accurate each pollster has been in the past, whether the poll is partisan, how a pollsters’ forecast compared against other polls, and the extent to which pollsters are influenced by other pollsters (Silver, 2014). 
+
+As seen in Table 1, pollsters with high ratings tend to have the simple average error, or the difference between the poll and the actual election result. Note that the magnitude of the simple average error does not perfectly correlate with the ratings and that FiveThirtyEight uses other metrics of errors such as the difference between the poll’s average error and the predicted magnitude of the error based on factors such as the type of the election and the number of days the poll was conducted before the election (Silver, 2014)
+
+
+```{r Democrat vote share 2018, include = FALSE}
+100 - df$pp_vote_share[df$election_year == 2018]
+```
+
 ```{r download fivethirtyeight pollster rating data, include = FALSE}
 # Read in data
 pollster_ratings <- read.csv("https://raw.githubusercontent.com/fivethirtyeight/data/master/pollster-ratings/2020/pollster-ratings.csv")
@@ -269,7 +280,7 @@ pollster_ratings %>%
   arrange(desc(X..of.Polls))
 ```
 
-```{r}
+```{r pollster ratings table, echo = FALSE}
 pollster_ratings_df %>%
   mutate(Rating = factor(Rating, levels = ratings_list)) %>%
   arrange(Rating) %>%
@@ -281,7 +292,20 @@ pollster_ratings_df %>%
 
 ## The Generic Ballot
 
+Past studies have suggested that when combined few other basic variables, the generic ballot can help predict the outcomes of House elections. Prior to the 2018 midterm elections, Abramowitz (2018) used a simple model with three variables (the generic ballot, the President’s party, and the number of seats that each party holds before the election) and predicted that if Democrats maintained their early lead in the generic ballot, they would gain about 30 seats. In reality, the Democrats gained 41 seats. Similarly, based on the generic ballot and the fact that the incumbent president was a Republican Bafumi et al. (2018) predicted that Democrats would gain 53.6% of the two-party vote. In fact, the Democrats won 54.4% of the two-party vote. 
+
+Considering the fact that the generic ballot has proven to be a decent predictor of House elections, this week, I will include in the model the results of the generic ballots conducted in election years. Note that I dropped the results of generic polls conducted prior to election years (i.e. odd-numbered years) since polls tend to converge to a point close to the actual outcome only right before the election (Gelman & King, 1993). For the same reason, I decided to calculate the weighted average of generic polls, giving more weights to polls were conducted near election day. The weights assigned to each poll is 365 – number of days the poll was conducted before election day. 
+
+Ideally, we should also take into how reliable each poll is. Indeed, in addition to the polls’ recency, the FiveThirtyEight weighs polls based on the sample size as well as the pollster rating, and it uses an algorithm to determine the exact magnitude of the weights (Silver, 2022). Unfortunately, I did not take into account those factors partly because the data includes polls that were conducted in the 1940s, which makes it difficult to pin down the reliability of the polls. This is one major limitation of my model. 
+
 ## Models
+
+In Table 2, I compare the model from last week that only took into account economic variables with models that take into account the generic ballot. Model (1) is the same as Model (C) from last week’s blog, and the variables are gross domestic product (GDP) growth between Q6 and Q7, unemployment in Q7, and whether the election is a midterm election. In Model (2), I also take into account the generic ballot. Inspired by Abramowitz (2018), in Models (3) and (4), I include the President’s party’s vote share in the previous election. Lastly, in model (5), I attempt to predict the President’s party’s vote share exclusively based on the generic ballot as well as whether the election is a midterm election.
+
+Not surprisingly, the generic ballot seems to be a significant predictor of the President’s party’s vote share, as seen in Model (2). Comparing model (1) with model (2), we can see that the adjusted R-squared drastically increased from 0.197 to 0.654. Interestingly, the adjusted R-squared is even higher for Model (5), the model that excludes economic variables, which suggests that the generic ballot alone is a strong predictor of electoral outcomes. Model (3) and model (4) suggest that the President’s party’s vote share in the previous election is not a significant variable.
+
+Does Model (5) suggest that the economic variables do not matter? I would argue otherwise. I believe that people’s perceptions of the economy affect the generic ballot, which in turn affects the vote share. Indeed, there is a positive correlation between GDP (Q7-Q6 growth) and the generic ballot.
+
 
 ```{r test correlation, include = FALSE}
 cor.test(df_without_2020$gdp_q7_q6, df_without_2020$rdi_q7_q6)
@@ -308,7 +332,7 @@ model5 <- lm(pp_vote_share ~ midterm + pp_generic_ballot,
 ```{r regression output 1, include = FALSE}
 stargazer(model1, model2, model3, model4, model5,
           type = 'html',
-          title = "Table 2: Models of Economic Voting Based on 1948-2018 Data",
+          title = "Table 2: Economic Variables and the Generic Ballot (1948-2018 Data)",
           dep.var.labels = "President's Party's Vote Share",
           covariate.labels = c('GDP Q6-Q7', 'Midterm', 'Unemployment Q7', 
                                'Generic Ballot', 'Previous Vote Share'),
@@ -328,11 +352,14 @@ gdp_gb_test_1 <- cor.test(df_without_2020$gdp_q7_q6, df_without_2020$pp_generic_
 gdp_gb_test_2 <- cor.test(df_without_2020$gdp_q7_q1, df_without_2020$pp_generic_ballot)
 ```
 
-`r round(gdp_gb_test_1$estimate, 2)` (p-value: `r format(gdp_gb_test_1$p.value, scientific = TRUE, digits = 2)`
+(Correlation coeffcient: `r round(gdp_gb_test_1$estimate, 2)`, p-value: `r format(gdp_gb_test_1$p.value, scientific = TRUE, digits = 2)`
 
 `r round(gdp_gb_test_2$estimate, 2)` (p-value: `r format(gdp_gb_test_2$p.value, scientific = TRUE, digits = 2)`
 
 ## Model Testing
+
+Models (2) and (5), which take into account the generic ballot, clearly seem to fit the data better than Model (1), which take into account economic variables. As seen in Figure 1, compared with Model (1), the predicted values based on Models (2) and (5) seem to more close to the actual values. The Root-Mean-Squared-Error (RMSE) of Model (1) is 2.932, while RMSE of Models (2) and (5) are 1.893 and 1.927, respectively (Table 3). 
+As seen in Figure 2, when I ran 1000 runs of cross-validation by randomly holding out 8 observations in each iteration, I observed that the mean out-of-sample residuals tend to cluster around -1 to 1.
 
 ```{r, echo = FALSE, fig.cap = "Actual Values vs Predicted Values"}
 plot(df$election_year, df$pp_vote_share,
@@ -395,16 +422,19 @@ cv_model2_error <-
 })
 ```
 
-```{r mean out-of-sample residual plot, include = FALSE}
+```{r mean out-of-sample residual plot, echo = FALSE}
 # Plot mean out-of-sample residual
 tibble(residual = cv_model2_error) %>%
-  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-6, 6, by = 1)) +
-  labs(title = "Mean Out−of−Sample Residual: Model 2",
+  ggplot(., aes(residual)) + geom_histogram(breaks = seq(-4, 4, by = 0.5)) +
+  labs(title = "Figure 2: Mean Out−of−Sample Residual: Model 2",
        x = "Residual") +
   theme_bw()
 ```
 
-## Predictions
+## Prediction
+
+Latest data shows that Democrats and Republicans are neck and neck in terms of their performance in generic ballots, with Democrats gaining about 43.7% and Republicans gaining about 44.0%. Note that the averages are weighted based on the recency of the polls. Based on this information as well as the economic variables that I used in last week’s blog post, Model (2) suggests that Democrats will gain about 43.88% of the popular vote cast for the two major parties. Model (5) predicts similar outcomes, and both Models (2) and (5) seem to predict a more favorable outcome for Democrats. Note that the 95% confidence intervals of the models are quite large, reflecting the limitations of these models.
+
 ```{r load 2022 generic ballot data, include = FALSE}
 recent_generic_df <- read_csv("analysis_data/538_generic_poll_2022.csv")
 # subtract end date
@@ -446,6 +476,11 @@ latest_data <-
              pp_generic_ballot = recent_generic_final$dem_poll_weighted)
 ```
 
+```{r generic ballot, include = FALSE}
+recent_generic_final
+```
+
+
 ```{r make predictions, include = FALSE}
 model1_pred <- predict(model1, latest_data, interval = "prediction")
 model2_pred <- predict(model2, latest_data, interval = "prediction")
@@ -455,12 +490,12 @@ model5_pred <- predict(model5, latest_data, interval = "prediction")
 ```{r model evaluation and prediction, include = FALSE}
 model_eval <- as.data.frame(
   matrix(
-    c("1", summary(model1)$r.squared, rmse_model1, model1_pred,
-      "2", summary(model2)$r.squared, rmse_model2, model2_pred,
-      "5", summary(model5)$r.squared, rmse_model5, model5_pred),
+    c("1", summary(model1)$adj.r.squaredr, rmse_model1, model1_pred,
+      "2", summary(model2)$adj.r.squared, rmse_model2, model2_pred,
+      "5", summary(model5)$adj.r.squared, rmse_model5, model5_pred),
     ncol = 6, byrow = TRUE))
 # Label columns
-names(model_eval) <- c("Model", "R-squared", "RMSE", 
+names(model_eval) <- c("Model", "Adjusted R-squared", "RMSE", 
                        "Fitted", 
                        "Lower", 
                        "Upper")
@@ -475,9 +510,9 @@ model_eval[,6] <- as.numeric(model_eval[,6])
 model_eval <- mutate_if(model_eval, is.numeric, format, digits= 4) 
 ```
 
-```{r make table}
+```{r make table, echo = FALSE}
 # Plot table
-table3 <- gt(model_eval) %>%
+gt(model_eval) %>%
   tab_header(title = "Table 3: Model Testing and Prediction for 2022") %>%
   tab_spanner(
     label = "Model Evaluation",
@@ -491,5 +526,14 @@ table3 <- gt(model_eval) %>%
 
 
 ## References
+Abramowitz, A. (2018). Will Democrats Catch a Wave? The Generic Ballot Model and the 2018 US House Elections. *PS: Political Science & Politics, 51*(S1), 4-6. doi:10.1017/S1049096518001567
+
+Bafumi, J., Erikson, R., & Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. *PS: Political Science & Politics, 51*(S1), 7-11. doi:10.1017/S1049096518001579
+
+
+Gelman, A., & King, G. (1993). Why Are American Presidential Election Campaign Polls So Variable When Votes Are So Predictable? *British Journal of Political Science, 23*(4), 409–451. https://doi.org/10.1017/S0007123400006682
+
+
+Silver, N. (2014, September 25). How FiveThirtyEight calculates pollster ratings. *FiveThirtyEight.*  https://fivethirtyeight.com/features/how-fivethirtyeight-calculates-pollster-ratings/ 
 
 
