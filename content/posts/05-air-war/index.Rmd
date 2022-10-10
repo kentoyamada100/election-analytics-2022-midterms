@@ -22,12 +22,16 @@ library(tidyverse)
 library(readxl)
 library(sf)
 library(stringi)
+library(kableExtra)
+library(stargazer)
 ```
 
 # Two-step Prediction
 
 # Nation-level Prediction
-```{r nation-level prediction data, include = FALSE}
+
+
+```{r load data, include = FALSE}
 # Data on GDP/quarter
 gdp_df <- read_csv("analysis_data/GDP_quarterly.csv") %>%
   select(-c("...1", "...2")) # de-select unnecessary columns
@@ -185,7 +189,11 @@ share_df_final <- share_df_final %>%
          pp_seat_share = # Seat share of the incumbent President's party
            case_when(inc_pres_party == "D" ~ D_seats/435,
                      inc_pres_party == "R" ~ R_seats/435)) %>%
-  select(year, pp_vote_share, midterm, pp_seat_share, inc_pres_party, president_party) %>%
+  # Calculate incumbent President's vote/seat share in the previous election
+  mutate(pp_prev_vote_share = lag(pp_vote_share),
+         pp_prev_seat_share = lag(pp_seat_share)) %>%
+  select(year, pp_vote_share, midterm, pp_seat_share, inc_pres_party, president_party,
+         pp_prev_vote_share, pp_prev_seat_share) %>%
   rename(election_year = year)
 ```
 
@@ -213,29 +221,43 @@ poll_df_final <- poll_df %>%
   rename(election_year = year)
 ```
 
-```{r finalize national_df, include = FALSE}
-national_df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
+```{r finalize df, include = FALSE}
+df <- full_join(gdp_df_final, rdi_df_final, by = "election_year") %>%
   full_join(unemp_df_final, by = "election_year") %>%
   full_join(share_df_final, by = "election_year") %>%
   full_join(poll_df_final, by = "election_year")
 
 # Calculate polling data for President's party
-national_df <- national_df %>%
+df <- df %>%
   mutate(pp_generic_ballot= # Two-party vote share of the incumbent President's party
            case_when(inc_pres_party == "D" ~ dem_poll_weighted,
                      inc_pres_party == "R" ~ rep_poll_weighted))
 ```
 
-```{r national_df_2020, include = FALSE}
+```{r df_2020, include = FALSE}
 # Discard 2020
-national_df_without_2020 <- national_df[national_df$election_year != 2020,]
+df_without_2020 <- df[df$election_year != 2020,]
 ```
 
-```{r nation-level model, include = FALSE}
-national_model <- 
-  lm(pp_vote_share ~ gdp_q7_q6 + midterm + pp_generic_ballot, 
-        data = national_df_without_2020)
+
+```{r models, include = FALSE}
+model1 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + pp_generic_ballot, 
+             data = df_without_2020)
 ```
+
+
+```{r regression output 1, include = FALSE}
+stargazer(model1,
+          type = 'html',
+          title = "Table 1: Forecasting Nation-level Two-Party Vote Share",
+          dep.var.labels   = "President's Party's Vote Share",
+          covariate.labels = c('GDP Q6-Q7', "Midterm", 'Generic Ballot'),
+          model.numbers = FALSE) %>%
+  save_kable(file = "static/posts/05-air-war/table1.png",
+             zoom = 2.5)
+```
+
+![](table1.png)
 
 ```{r load 2022 generic ballot data, include = FALSE}
 recent_generic_df <- read_csv("analysis_data/538_generic_poll_2022.csv")
@@ -261,7 +283,7 @@ recent_generic_final <- recent_generic_df %>%
             rep_poll_weighted = weighted.mean(rep_poll, recency))
 ```
 
-```{r predictions data, include = FALSE}
+```{r predictions, include = FALSE}
 # Get data for 2022
 latest_data <- 
   data.frame(midterm = TRUE, 
@@ -272,15 +294,32 @@ latest_data <-
                # GDP in the Q1 of 2022 (i.e. Q5)
                gdp_df_relevant$GDPC1[gdp_df_relevant$year == 2022][1])/
                gdp_df_relevant$GDPC1[gdp_df_relevant$year == 2022][1],
-             unrate_q7 =
-               # Data for Q7 is not available yet -> Use Q6 data
-               unemp_df_relevant$unrate[unemp_df_relevant$year == 2022][2],
              pp_generic_ballot = recent_generic_final$dem_poll_weighted)
 ```
 
 
-```{r}
-predict(national_model, data = latest_data, interval = "prediction")
+```{r make predictions, include = FALSE}
+model1_pred <- predict(model1, latest_data, interval = "prediction")
+```
+
+```{r model 1 error, include = FALSE}
+set.seed(12345)
+nsims = 3000
+model1_error <- rnorm(nsims, mean = 0, sd = summary(model1)$sigma)
+```
+
+```{r plot 3000 simulations, include = FALSE}
+ggplot(mapping = aes(rep(model1_pred[1], 3000) + model1_error)) +
+  geom_histogram(binwidth = 1, boundary = 50) +
+  geom_vline(aes(xintercept = 50), color = "purple") +
+    annotate(geom = "text",
+           x =  50.3, y = 600, label = 50, color = "purple") +
+  geom_vline(aes(xintercept = model1_pred[1]), color = "blue") +
+  annotate(geom = "text",
+           x =  model1_pred[1]-0.5, y = 600, label = round(model1_pred[1], 2), color = "blue") +
+  labs(x = "Two-Party Democratic Popular Vote Share: 3,000 Simulations", y = NULL,
+       title = "Predicted Nation-wide Democratic Popular Vote Share") +
+  theme_light()
 ```
 
 
@@ -413,7 +452,6 @@ vote_share_2018 <- vote_share %>%
   filter(raceYear == 2018) %>% # Filter out 2018 data
   rename(pct_D = DemVotesMajorPercent, District = CD) # Rename columns
 
-
 vote_share_2018_df <- 
   bind_rows(
     # States except for Maine
@@ -520,6 +558,37 @@ df_2018 <- df_2018 %>%
   mutate(pct_D_rel = pct_D/dem_pop_2018)
 ```
 
+```{r model to convert national popular vote share to district-level vote share, include = FALSE}
+model2 <- lm(pct_D_rel ~ rating_avg + d_ad_rate + d_inc, data = df_2018)
+```
+
+```{r regression output 2, include = FALSE}
+stargazer(model2,
+          type = 'html',
+          title = "Table 2: Performance Relative to Nation-level Vote Share Based on 2018 Data",
+          dep.var.labels   = "District-level Dem Vote Share/ Nation-level Dem Vote Share",
+          covariate.labels = c('Expert Rating', "Dem Ad %", 'Dem Incumbent'),
+          model.numbers = FALSE) %>%
+  save_kable(file = "static/posts/05-air-war/table2.png",
+             zoom = 2.5)
+```
+
+![](table2.png)
+
+```{r 2018 true vs actual, echo = FALSE}
+# Fit actual 2018 data
+df_2018_fitted <- df_2018
+df_2018_fitted$fitted <- predict(model2, df_2018)*df_2018$pct_D 
+ggplot(data = df_2018_fitted) +
+  geom_point(mapping = aes(x = pct_D, y = fitted)) +
+  labs(title = "Figure 2: District-level Democratic Vote Share",
+       x = "Actual 2018 Democratic Vote Share",
+       y = "Predicted 2018 Democratic Vote Share") +
+  theme_classic()
+```
+
+## Predictions
+
 ```{r merge 2022 data, include = FALSE}
 df_2022 <- ratings_2022_df %>%
   full_join(ads_2022_df, by = "District") %>%
@@ -530,12 +599,36 @@ df_2022 <- ratings_2022_df %>%
 df_2022$d_ad_rate[is.na(df_2022$d_ad_rate)] <- 50
 ```
 
-
-```{r model to convert national popular vote share to district-level vote share, include = FALSE}
-convert_nat_dist <- lm(pct_D_rel ~ rating_avg + d_ad_rate + d_inc, data = df_2018)
+```{r predicted performance relative to national popular vote share, include = FALSE}
+df_2022_predict <- df_2022
+df_2022_predict$pred_pct_D_rel <- predict(model2, df_2022)
 ```
 
-## Predictions
+
+
+```{r predict number of seats that Democrats will win, include = FALSE}
+d_seats_predict <- rep(0, nsims)
+
+# Calculate number of seats that Democrats will win in each of the 3,000 simulations
+for(i in 1:nsims){
+  d_seats_predict[i] <- 
+    sum((model1_pred[1] + model1_error[i])* # Outcome of 3,000 simulations (national popular vote)
+          df_2022_predict$pred_pct_D_rel # Democrat's predicted performance relative to national vote share
+            > 50) # Count number of districts where Democratic two-party vote share > 50
+}
+```
+
+
+```{r}
+ggplot(mapping = aes(d_seats_predict)) +
+  geom_histogram(binwidth = 5, boundary = 200) +
+  geom_vline(aes(xintercept = 218), color = "purple") +
+  labs(x = "Number of Democratic Seats", y = NULL,
+       title = "Predicted Number of Democratic Seats") +
+  theme_bw()
+```
+
+
 
 Data on 2022 incumbency was taken from https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
 https://ballotpedia.org/United_States_Congress_elections,_2022

@@ -1,0 +1,56 @@
+---
+title: "05-The 'Air War'"
+author: "Kento Yamada"
+date: '2022-10-09'
+output: html_document
+---
+
+
+
+<div id="two-step-prediction" class="section level1">
+<h1>Two-step Prediction</h1>
+</div>
+<div id="nation-level-prediction" class="section level1">
+<h1>Nation-level Prediction</h1>
+<p><img src="table1.png" /></p>
+</div>
+<div id="district-level-prediction-incorporating-ads-data" class="section level1">
+<h1>District-level Prediction Incorporating Ads Data</h1>
+<pre class="r"><code>df_2018 &lt;- vote_share_2018_df %&gt;% 
+  full_join(ratings_2018_df, by = &quot;District&quot;) %&gt;%
+  full_join(ads_df, by = &quot;District&quot;) %&gt;%
+  full_join(incumb_2018_df, by = &quot;District&quot;)
+
+# If there were no ads in a particular district, assume that the Democratic share of ads was 50%
+# (i.e. assume that neither Democrats nor Republicans had an advantage in that district)
+df_2018$d_ad_rate[is.na(df_2018$d_ad_rate)] &lt;- 50
+
+# Democratic candidate&#39;s performance in the district relative to Democrat&#39;s nation-wide vote share
+df_2018 &lt;- df_2018 %&gt;%
+  mutate(pct_D_rel = pct_D/dem_pop_2018)</code></pre>
+<p><img src="table2.png" /></p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/2018%20true%20vs%20actual-1.png" width="672" /></p>
+<div id="predictions" class="section level2">
+<h2>Predictions</h2>
+<pre class="r"><code>ggplot(mapping = aes(d_seats_predict)) +
+  geom_histogram(binwidth = 5, boundary = 200) +
+  geom_vline(aes(xintercept = 218), color = &quot;purple&quot;) +
+  labs(x = &quot;Number of Democratic Seats&quot;, y = NULL,
+       title = &quot;Predicted Number of Democratic Seats&quot;) +
+  theme_bw()</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>Data on 2022 incumbency was taken from <a href="https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list" class="uri">https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list</a>
+<a href="https://ballotpedia.org/United_States_Congress_elections,_2022" class="uri">https://ballotpedia.org/United_States_Congress_elections,_2022</a></p>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Kantar/CMAG with analysis by the Wesleyan Media Project.
+<a href="https://mediaproject.wesleyan.edu/releases-100622/" class="uri">https://mediaproject.wesleyan.edu/releases-100622/</a></p>
+<p><a href="https://ballotpedia.org/United_States_House_of_Representatives_elections,_2018" class="uri">https://ballotpedia.org/United_States_House_of_Representatives_elections,_2018</a>
+<a href="https://ballotpedia.org/United_States_House_of_Representatives_elections,_2020" class="uri">https://ballotpedia.org/United_States_House_of_Representatives_elections,_2020</a>
+<a href="https://ballotpedia.org/United_States_Congress_elections,_2022" class="uri">https://ballotpedia.org/United_States_Congress_elections,_2022</a></p>
+<p><a href="https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list" class="uri">https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list</a></p>
+<p><a href="https://www.cookpolitical.com/pvi-map-and-district-list" class="uri">https://www.cookpolitical.com/pvi-map-and-district-list</a>
+<a href="https://ballotpedia.org/United_States_Congress_elections,_2022" class="uri">https://ballotpedia.org/United_States_Congress_elections,_2022</a></p>
+</div>
+</div>
+</div>
