@@ -1,7 +1,7 @@
 ---
 title: "05-The 'Air War'"
 author: "Kento Yamada"
-date: '2022-10-09'
+date: '2022-10-10'
 output: html_document
 ---
 
@@ -26,10 +26,18 @@ library(kableExtra)
 library(stargazer)
 ```
 
-# Two-step Prediction
+In addition to incumbency, the strength of candidates’ campaigns has an impact on electoral outcomes. In this blog post, I will predict the outcomes at the district level, taking into account three district-level variables: expert ratings, incumbency, and the volume of ads.
 
-# Nation-level Prediction
+## Incorporating District-Level Information
+### Two-Step Forecasting Model
 
+Similar to Bafumi et al. (2018), my model is made up of two steps. First, I predict the Democratic popular vote share and run 3,000 simulations to obtain a set of possible outcomes at the national level. Second, I build a model to see how the national-level vote share translates into district-level vote share. I calculate how each of the 3,000 simulated popular vote share translates into district-level vote share and predict the number of seats that the Democrats will win.
+
+I adopt this method instead of building a single model that incorporates district-level variables because it allows us to take into account redistricting. Relying on historical data at the district level can be problematic in districts where the dynamics have shifted greatly due to redistricting. For example, in California’s 22nd District, which is the district I have been monitoring throughout the semester, used to be a Republican-leaning district but became Democratic-leaning after redistricting. In such districts, relying on historical data to build a district-level forecast model is not realistic. My method addresses that issue by predicting the national-level vote share first and translating that into district-level vote shares. I use data from the 2018 House elections to see how the national-level vote share generally tends to translate into district-level vote share.
+
+## National-level Prediction
+
+My forecast model for the popular vote share is similar to the models I built in Blog Post 03. As seen in Table 1, I predict the president’s party’s two-party popular vote share based on the GDP growth rate between the 6th quarter and 7th quarter, whether the election is a midterm election, and the president’s party’s performance in generic ballot polls. The generic ballot polls are weighted based on recency.
 
 ```{r load data, include = FALSE}
 # Data on GDP/quarter
@@ -239,17 +247,15 @@ df <- df %>%
 df_without_2020 <- df[df$election_year != 2020,]
 ```
 
-
 ```{r models, include = FALSE}
 model1 <- lm(pp_vote_share ~ gdp_q7_q6 + midterm + pp_generic_ballot, 
              data = df_without_2020)
 ```
 
-
 ```{r regression output 1, include = FALSE}
 stargazer(model1,
           type = 'html',
-          title = "Table 1: Forecasting Nation-level Two-Party Vote Share",
+          title = "Table 1: Two-Party Popular Vote Share (1948-2018 Data)",
           dep.var.labels   = "President's Party's Vote Share",
           covariate.labels = c('GDP Q6-Q7', "Midterm", 'Generic Ballot'),
           model.numbers = FALSE) %>%
@@ -257,11 +263,12 @@ stargazer(model1,
              zoom = 2.5)
 ```
 
-![](table1.png)
+![](table1.png){width=50%}
+
+Using this model, I run simulations to predict the Democratic popular vote share in 2022, thereby obtaining a set of 3,000 potential outcomes at the national level. The simulations are based on the assumption that the errors of the model are normally distributed, with the mean being 0 and the standard deviation being equal to the residual standard error of the model. As seen in Figure 1, the most likely outcome in 2022 is for the Democrats to win 47 to 48% of the two-party popular vote.
 
 ```{r load 2022 generic ballot data, include = FALSE}
 recent_generic_df <- read_csv("analysis_data/538_generic_poll_2022.csv")
-# subtract end date
 ```
 
 ```{r clean 2022 generic ballot data, include = FALSE}
@@ -306,9 +313,10 @@ model1_pred <- predict(model1, latest_data, interval = "prediction")
 set.seed(12345)
 nsims = 3000
 model1_error <- rnorm(nsims, mean = 0, sd = summary(model1)$sigma)
+# S.D: Residual standard error: assumption that error is normally distributed
 ```
 
-```{r plot 3000 simulations, include = FALSE}
+```{r plot 3000 simulations, echo = FALSE}
 ggplot(mapping = aes(rep(model1_pred[1], 3000) + model1_error)) +
   geom_histogram(binwidth = 1, boundary = 50) +
   geom_vline(aes(xintercept = 50), color = "purple") +
@@ -316,14 +324,23 @@ ggplot(mapping = aes(rep(model1_pred[1], 3000) + model1_error)) +
            x =  50.3, y = 600, label = 50, color = "purple") +
   geom_vline(aes(xintercept = model1_pred[1]), color = "blue") +
   annotate(geom = "text",
-           x =  model1_pred[1]-0.5, y = 600, label = round(model1_pred[1], 2), color = "blue") +
-  labs(x = "Two-Party Democratic Popular Vote Share: 3,000 Simulations", y = NULL,
-       title = "Predicted Nation-wide Democratic Popular Vote Share") +
+           x =  model1_pred[1]-1.5, y = 600, label = "Predicted: 47.9", color = "blue") +
+  labs(title = "Figure 1: Predicted Democratic Popular Vote Share (3,000 Simulations)",
+        x = "Two-Party Democratic Popular Vote Share", y = "Frequency") +
   theme_light()
 ```
 
 
-# District-level Prediction Incorporating Ads Data
+## District-Level Prediction
+### Incorporating Ads Data
+
+Next, relying on data from the 2018 elections, I build a model to see how the popular vote share translates into district-level vote shares. The dependent variable is district-level Democratic vote share relative to the Democratic popular vote share. (For example, if a candidate won 60% of the two-party vote in a certain district, we can say that they won 1.10 times the Democratic popular two-party vote share, which was 54.35% in 2018). The independent variables are:
+
+* Expert rating: the average of the ratings from the Cook Political Report, Inside Elections, and Sabato’s Crystal Ball. The ratings were converted into a 7-point scale, with 7 being “Solid/Safe Democrat,” 4 being “Toss-up”, and 1 being “Solid/Safe Republican.” The data was retrieved from Ballotpedia (2018).
+* Ads (Dem %): Percentage of TV ads aired in the district by the Democratic candidate. In districts where there were no TV ads, the value is held at 50%, assuming that neither campaign had an advantage in that district.
+* Incumbency: 1 if the Democratic candidate was an incumbent.
+
+
 ```{r expert ratings data 2018-2022, include = FALSE}
 ratings_2018 <- read_excel("analysis_data/expert_ratings_2018.xlsx")
 ratings_2022 <- read_excel("analysis_data/expert_ratings_2022.xlsx")
@@ -542,8 +559,7 @@ incumb_2022_df$District[which(incumb_2022_df$District == "VT")] <- "VT-01"
 incumb_2022_df$District[which(incumb_2022_df$District == "WY")] <- "WY-01"
 ```
 
-
-```{r merge 2018 data}
+```{r merge 2018 data, include = FALSE}
 df_2018 <- vote_share_2018_df %>% 
   full_join(ratings_2018_df, by = "District") %>%
   full_join(ads_df, by = "District") %>%
@@ -565,15 +581,19 @@ model2 <- lm(pct_D_rel ~ rating_avg + d_ad_rate + d_inc, data = df_2018)
 ```{r regression output 2, include = FALSE}
 stargazer(model2,
           type = 'html',
-          title = "Table 2: Performance Relative to Nation-level Vote Share Based on 2018 Data",
-          dep.var.labels   = "District-level Dem Vote Share/ Nation-level Dem Vote Share",
+          title = "Table 2: Performance Relative to Popular Vote Share Based on 2018 Data",
+          dep.var.labels   = "District-level Dem Vote Share/ National-Level Dem Vote Share",
           covariate.labels = c('Expert Rating', "Dem Ad %", 'Dem Incumbent'),
           model.numbers = FALSE) %>%
   save_kable(file = "static/posts/05-air-war/table2.png",
              zoom = 2.5)
 ```
 
-![](table2.png)
+![](table2.png){width=80%}
+
+Note that ads seem to have a weak and significant effect. While this result may be counterintuitive given the evidence that voters are actually persuaded by TV ads (Huber & Arceneaux, 2007), it makes sense when considering the fact that both parties strategically air ads in competitive districts. Campaigns may end up losing races despite investing in TV ads because the race was competitive.
+
+In Figure 2, I plotted the predicted Democratic vote share based on this model against the actual vote share in 2018. The predicted vote shares exceed 100 in some districts, which shows the limitation of this model. However, the model correctly predicted the outcomes of 423/435 races, which suggests that the model may be good enough if we are only interested in who wins the race.
 
 ```{r 2018 true vs actual, echo = FALSE}
 # Fit actual 2018 data
@@ -587,7 +607,15 @@ ggplot(data = df_2018_fitted) +
   theme_classic()
 ```
 
-## Predictions
+```{r count the number of correct predictions, include = FALSE}
+# Predicted Democratic vote share > 50 vs Actual Democratic vote share > 50
+sum((predict(model2, df_2018)*df_2018$pct_D > 50) == (df_2018$pct_D > 50))
+```
+
+
+## Predicted Number of Democratic Seats
+
+Lastly, I use this model to predict the number of seats that the Democrats will win in 2022. Using the model shown in Table 2, I translate  each of the 3,000 potential Democratic vote shares into district-level vote share based on the latest data. The data on expert ratings was retrieved from Ballotpedia (2022), and the data on incumbency was retrieved from the Cook Political Report (2022) and Ballotpedia (2022). The data on the volume of TV ads was retrieved from the data that was compiled by Kantar/CMAG and analyzed by the Wesleyan Media Project (2022). This dataset shows the volume of TV ads aired between September 19 and October 2 in 53 House districts. Note that there will likely be more ads between now and voting day, and one party might gain an advantage over the other closer to voting day. We can expect that campaigns will strategically air more ads closer to voting day since the effect of TV ads are short-lived (Gerber et al., 2011)
 
 ```{r merge 2022 data, include = FALSE}
 df_2022 <- ratings_2022_df %>%
@@ -604,8 +632,6 @@ df_2022_predict <- df_2022
 df_2022_predict$pred_pct_D_rel <- predict(model2, df_2022)
 ```
 
-
-
 ```{r predict number of seats that Democrats will win, include = FALSE}
 d_seats_predict <- rep(0, nsims)
 
@@ -618,21 +644,26 @@ for(i in 1:nsims){
 }
 ```
 
-
-```{r}
-ggplot(mapping = aes(d_seats_predict)) +
-  geom_histogram(binwidth = 5, boundary = 200) +
-  geom_vline(aes(xintercept = 218), color = "purple") +
-  labs(x = "Number of Democratic Seats", y = NULL,
-       title = "Predicted Number of Democratic Seats") +
-  theme_bw()
+```{r Democratic seats prediction summary, include = FALSE}
+summary(d_seats_predict)
 ```
 
 
+As seen in Figure 3, the median of the predicted number of Democratic seats is 206, and Democrats are highly unlikely to win the majority. The predicted Democratic seat share (47.4%) ended up being close to the predicted Democratic popular vote share (47.9%).
 
-Data on 2022 incumbency was taken from https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
-https://ballotpedia.org/United_States_Congress_elections,_2022
-
+```{r plot predicted number of seats, echo = FALSE}
+ggplot(mapping = aes(d_seats_predict)) +
+  geom_histogram(binwidth = 2, boundary = 200) +
+  geom_vline(aes(xintercept = 218), color = "purple") +
+  annotate(geom = "text",
+           x =  222, y = 500, label = "Majority: 218", color = "purple") +
+  geom_vline(aes(xintercept = median(d_seats_predict)), color = "blue") +
+  annotate(geom = "text",
+           x =  202, y = 500, label = "Median: 206", color = "blue") +
+  labs(title = "Figure 3: Predicted Number of Democratic Seats (3,000 Simulations)",
+       x = "Number of Democratic Seats", y = "Frequency") +
+  theme_bw()
+```
 
 
 
@@ -640,16 +671,17 @@ https://ballotpedia.org/United_States_Congress_elections,_2022
 
 ### References
 
-Kantar/CMAG with analysis by the Wesleyan Media Project.
-https://mediaproject.wesleyan.edu/releases-100622/
+Bafumi, J., Erikson, R., & Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. *PS: Political Science & Politics, 51*(S1), 7-11. doi:10.1017/S1049096518001579
 
-https://ballotpedia.org/United_States_House_of_Representatives_elections,_2018
-https://ballotpedia.org/United_States_House_of_Representatives_elections,_2020
-https://ballotpedia.org/United_States_Congress_elections,_2022
+Ballotpedia. (2018). United States House of Representatives elections, 2018. https://ballotpedia.org/United_States_House_of_Representatives_elections,_2018
 
-https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
+Ballotpedia. (2022). United States Congress elections, 2022. https://ballotpedia.org/United_States_Congress_elections,_2022
 
+Cook Political Report. (2022). PVI Map and District List. https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
 
-https://www.cookpolitical.com/pvi-map-and-district-list
-https://ballotpedia.org/United_States_Congress_elections,_2022
+Gerber, A.S., Gimpel, J. G., Green, D. P., & Shaw, D. R. (2011). How Large and Long-lasting Are the Persuasive Effects of Televised Campaign Ads? Results from a Randomized Field Experiment. *American Political Science Review, 105*(1), 135–150. https://doi.org/10.1017/S000305541000047X
+
+Huber, G.A. & Arceneaux, K. (2007). Identifying the Persuasive Effects of Presidential Advertising. *American Journal of Political Science, 51*(4), 957–977. https://doi.org/10.1111/j.1540-5907.2007.00291.x
+
+Wesleyan Media Project. (2022, October 6). Democrats Out-Pacing GOP in Senate Races. https://mediaproject.wesleyan.edu/releases-100622/
 
