@@ -432,7 +432,7 @@ sim_D_votes[df_2022$District == "CA-22",] %>%
   geom_histogram(binwidth = 100) +
   labs(title = "Figure 1: Predicted Number of Votes Cast for Democratic Candidate in CA-22",
        subtitle = "10,000 Binomial Process Simulations",
-       x = NULL, y = "Frequency")
+       x = NULL, y = "Count")
 ```
 
 ```{r prepare data frame for plotting, include = FALSE}
@@ -478,7 +478,7 @@ ggplot(df_2022, aes(x = pred)) +
   theme_bw() +
   labs(title = "Figure 3: Predicted Probability of a Democratic Vote/Victory in Each District",
        x = "Predicted Probability of a Democratic Vote/Victory",
-       y = "Frequency")
+       y = "Count")
 ```
 
 ```{r exclude safe seats, echo = FALSE}
@@ -491,7 +491,7 @@ df_2022 %>%
   labs(title = "Figure 4: Predicted Probability of a Democratic Vote/Victory in Each District",
        subtitle = "Excluding Safe Seats",
        x = "Predicted Probability of a Democratic Vote/Victory",
-       y = "Frequency")
+       y = "Count")
 ```
 
 ```{r count number of predicted Democratic victory, include = FALSE}
