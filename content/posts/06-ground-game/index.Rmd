@@ -1,0 +1,472 @@
+---
+title: "06-The 'Ground Game'"
+author: "Kento Yamada"
+date: '2022-10-19'
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
+```
+
+```{r pull functions, include = FALSE}
+setwd("R")
+files.sources = list.files()
+sapply(files.sources, source)
+setwd("..")
+```
+
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(readxl)
+library(sf)
+library(stringi)
+library(kableExtra)
+library(stargazer)
+library(usdata)
+library(geofacet)
+```
+
+```{r load data, include = FALSE}
+# Vote share
+share_df <- read_csv("analysis_data/house_popvote_seats.csv") %>%
+  select(-c("...1", "AreaAll")) # de-select unnecessary columns
+
+# Expert ratings
+ratings <- read_csv("analysis_data/expert_rating.csv")
+# Expert ratings data for 2022
+ratings_2022 <- read_excel("analysis_data/expert_ratings_2022.xlsx")
+
+# Vote share by district
+vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
+
+# Incumbency
+incumb <- read_csv("analysis_data/incumb_dist_1948-2020.csv")
+# Data for 2022
+incumb_2022 <- read_csv("analysis_data/house_cands.csv")
+
+# CVAP
+cvap_by_2022_cd <- read_excel("analysis_data/cvap_by_2022_cd.xlsx")
+```
+
+```{r outcome by CD, include = FALSE}
+d_win_df <- vote_share %>%
+  # Filter out data from 2012 to 2018
+  filter(raceYear >= 2012, raceYear <= 2018) %>% # Filter out 2018 data
+  rename(year = raceYear, District = CD) %>% # Rename columns
+  select(State, district_num, year, WinnerParty, District) %>%
+  # 1 if Democrat won
+  mutate(d_win = if_else(WinnerParty == "D", 1, 0))
+
+# Find duplicates: summary(as.factor(d_win_df$District))
+# Remove other duplicates caused by runoffs etc.
+drop <- c(
+  which(d_win_df$District == "LA-03" & d_win_df$year == 2016)[2],
+  which(d_win_df$District == "LA-03" & d_win_df$year == 2012)[2],
+  which(d_win_df$District == "LA-04" & d_win_df$year == 2016 & 
+        d_win_df$WinnerParty == "D"),
+  which(d_win_df$District == "LA-05" & d_win_df$year == 2014 & 
+        d_win_df$WinnerParty == "D"),
+   which(d_win_df$District == "ME-02" & d_win_df$year == 2018 & 
+        d_win_df$WinnerParty == "R") # Ranked choice voting in ME
+)
+d_win_df <- d_win_df[-drop,]
+
+# Change district names
+d_win_df$District[which(d_win_df$District == "AK-AL")] <- "AK-01"
+d_win_df$District[which(d_win_df$District == "DE-AL")] <- "DE-01"
+d_win_df$District[which(d_win_df$District == "MT-AL")] <- "MT-01"
+d_win_df$District[which(d_win_df$District == "ND-AL")] <- "ND-01"
+d_win_df$District[which(d_win_df$District == "SD-AL")] <- "SD-01"
+d_win_df$District[which(d_win_df$District == "VT-AL")] <- "VT-01"
+d_win_df$District[which(d_win_df$District == "WY-AL")] <- "WY-01"
+
+# Select relevant columns
+d_win_df <- select(d_win_df, -c(State, district_num, WinnerParty))
+```
+
+```{r Democratic popular vote share 2012-2018, include = FALSE}
+pop_share_df <- share_df %>%
+  filter(year >= 2012, year <= 2018) %>%
+  select(year, D_majorvote_pct) %>%
+  rename(d_pop_share = D_majorvote_pct)
+```
+
+```{r clean expert ratings data, include = FALSE}
+ratings_df <- ratings %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # District numbers
+  mutate(District = str_pad(district, 2, pad = "0")) %>%
+  # Define district names
+  mutate(District = paste(State, District, sep = "-")) %>%
+  
+  # Filter out data from 2012 to 2018
+  filter(year >= 2012, year <= 2018) %>%
+  
+  select(District, year, cook, rothenberg, sabatos_crystal_ball)
+
+# Calculate ratings average
+ratings_df$rating_avg = rowMeans(ratings_df[, -c(1,2)])
+
+# Change district names
+ratings_df$District[which(ratings_df$District == "AK-AL")] <- "AK-01"
+ratings_df$District[which(ratings_df$District == "MT-AL")] <- "MT-01"
+ratings_df$District[which(ratings_df$District == "ND-AL")] <- "ND-01"
+ratings_df$District[which(ratings_df$District == "SD-AL")] <- "SD-01"
+```
+
+```{r further clean expert ratings data, include = FALSE}
+# First merge d_win_df and ratings_df
+ratings_adj_df <- left_join(d_win_df, ratings_df, by = c("District", "year"))
+
+# If rating was missing for a particular district, that means that the race was not close
+# Assume that the rating was 7 if the Republicans ended up winning and 1 if the Democrats ended up winning
+ratings_adj_df[is.na(ratings_adj_df$rating_avg),]$rating_avg <- 
+  if_else(ratings_adj_df[is.na(ratings_adj_df$rating_avg),]$d_win == 0, 7, 1)
+
+# Select relevant columns
+ratings_adj_df <- ratings_adj_df %>% select(year, District, rating_avg)
+```
+
+```{r load ads data, include = FALSE}
+# ads <- read_csv("analysis_data/ads_2006_2018.csv")
+# Compress and save object
+# write_rds(ads, "analysis_data/ads_2006_2018.rds", compress = "xz")
+ads <- readRDS("analysis_data/ads_2006_2018.rds")
+ads_2022 <- read_excel("analysis_data/ads_2022_Sep19_Oct2.xlsx")
+```
+
+```{r clean ads historical data, include = FALSE}
+ads_df <- ads %>%
+  # De-select empty column
+  dplyr::select(-1) %>% 
+  # Select 2012-2018 elections
+  filter(cycle >= 2012 & cycle <= 2018) %>% 
+  rename(year = cycle) %>%
+  mutate(District = substr(creative, start = 7, stop = 10)) %>%
+  # Filter out non-Democrat/Republican ad
+  drop_na(party) %>% 
+  group_by(District, party, year) %>%
+  # Number of ads per district & per party
+  summarize(num_ad = n()) %>%
+  # Pivot wider
+  pivot_wider(names_from = party, values_from = num_ad,
+              # Assume that there was 1 ad in districts where there were no ads for one party
+              # Or else the log of the ratio will be infinity
+              values_fill = 1) %>%
+  # Log of ratio
+  mutate(d_ad_log_ratio = log(Democrat/Republican)) %>%
+  dplyr::select(year, District, d_ad_log_ratio, Democrat, Republican)
+
+# Format district names
+stri_sub(ads_df$District, 3, 2) <- "-"
+
+# Select relevant columns and rows
+ads_df <- select(ads_df, -c(Democrat, Republican))
+ads_df <- ads_df[-which(ads_df$District == "US-01"),]
+# IL-19 was eliminated due to redistricting
+ads_df <- ads_df[-which(ads_df$District == "IL-19"),]
+```
+
+```{r clean incumbency data, include = FALSE}
+# Filter out 2012-2018
+incumb_df <-  filter(incumb, year >= 2012 & year <= 2018)
+
+# Find duplicates: summary(as.factor(incumb_df$district_id))
+# Remove other duplicates caused by runoffs etc.
+drop_2 <- c(
+  which(incumb_df$district_id == "LA03" & incumb_df$year == 2016)[2],
+  which(incumb_df$district_id == "LA03" & incumb_df$year == 2012)[2],
+  which(incumb_df$district_id == "LA04" & incumb_df$year == 2016)[1],
+  which(incumb_df$district_id == "LA05" & incumb_df$year == 2014)[2],
+  which(incumb_df$district_id == "ME02" & incumb_df$year == 2018)[2]
+)
+incumb_df <- incumb_df[-drop_2,]
+
+# Code incumbent = 1
+incumb_df <- incumb_df %>%
+  mutate(d_inc = case_when(DemStatus == "Incumbent" ~ 1, 
+                           TRUE ~ 0)) %>%
+  rename(District = district_id) %>%
+  dplyr::select(year, District, d_inc)
+  
+# Format district names
+stri_sub(incumb_df$District, 3, 2) <- "-"
+
+# Change district names
+incumb_df$District[which(incumb_df$District == "AK-00")] <- "AK-01"
+incumb_df$District[which(incumb_df$District == "DE-00")] <- "DE-01"
+incumb_df$District[which(incumb_df$District == "MT-00")] <- "MT-01"
+incumb_df$District[which(incumb_df$District == "ND-00")] <- "ND-01"
+incumb_df$District[which(incumb_df$District == "SD-00")] <- "SD-01"
+incumb_df$District[which(incumb_df$District == "VT-00")] <- "VT-01"
+incumb_df$District[which(incumb_df$District == "WY-00")] <- "WY-01"
+```
+
+
+```{r join data sets, include = FALSE}
+df <- full_join(d_win_df, ratings_adj_df, by = c("year", "District")) %>%
+  full_join(ads_df, by = c("year", "District")) %>%
+  full_join(incumb_df, by = c("year", "District"))
+
+# If there were no ads in a district, we can say that there was no Democratic advantage
+# in terms of ads. Thus, d_ad_log_ratio is coded =0.
+df$d_ad_log_ratio[is.na(df$d_ad_log_ratio)] <- 0
+
+# Democratic popular vote share in each year
+df <- df %>%
+  mutate(d_pop_share =
+      case_when(year == 2012 ~ pop_share_df$d_pop_share[pop_share_df$year == 2012],
+            year == 2014 ~ pop_share_df$d_pop_share[pop_share_df$year == 2014],
+            year == 2016 ~ pop_share_df$d_pop_share[pop_share_df$year == 2016],
+            year == 2018 ~ pop_share_df$d_pop_share[pop_share_df$year == 2018])
+           )
+```
+
+
+```{r district-level model, include = FALSE}
+model <- glm(d_win ~ d_pop_share+ rating_avg + d_ad_log_ratio + d_inc, 
+             data = df, family = binomial)
+```
+
+```{r McFadden’s R-Squared, include = FALSE}
+with(summary(model), 1 - deviance/null.deviance)
+```
+
+## Predicted Number of Democratic Seats
+
+The data on the volume of TV ads was retrieved from the data that was compiled by Kantar/CMAG and analyzed by the Wesleyan Media Project (2022). This dataset shows the volume of TV ads aired between September 19 and October 2 in 53 House districts.
+
+Ballotpedia (2022)
+
+
+```{r clean 2022 expert ratings data, include = FALSE}
+ratings_2022_df <- ratings_2022 %>%
+  mutate(Cook = case_when(
+    Cook == "Solid Democratic" ~ 1,
+    Cook == "Likely Democratic" ~ 2,
+    Cook == "Lean Democratic" ~ 3,
+    Cook == "Toss-up" ~ 4,
+    Cook == "Lean Republican" ~ 5,
+    Cook == "Likely Republican" ~ 6,
+    Cook == "Solid Republican" ~ 7
+  )) %>%
+  mutate(Inside = case_when(
+    Inside == "Solid Democratic" ~ 1,
+    Inside == "Likely Democratic" ~ 2,
+    Inside == "Lean Democratic" ~ 3,
+    Inside == "Tilt Democratic" ~ 3.5,
+    Inside == "Toss-up" ~ 4,
+    Inside == "Tilt Republican" ~ 4.5,
+    Inside == "Lean Republican" ~ 5,
+    Inside == "Likely Republican" ~ 6,
+    Inside == "Solid Republican" ~ 7
+  )) %>%
+  mutate(Sabato = case_when(
+    Sabato == "Safe Democratic" ~ 1,
+    Sabato == "Likely Democratic" ~ 2,
+    Sabato == "Lean Democratic" ~ 3,
+    Sabato == "Toss-up" ~ 4,
+    Sabato == "Lean Republican" ~ 5,
+    Sabato == "Likely Republican" ~ 6,
+    Sabato == "Safe Republican" ~ 7
+  ))
+
+# Calculate ratings average
+ratings_2022_df$rating_avg = rowMeans(ratings_2022_df[, -1])
+ratings_2022_df <- ratings_2022_df %>%
+  dplyr::select(District, rating_avg)
+```
+
+```{r clean ads 2022 data, include = FALSE}
+ads_2022_df <- ads_2022 %>%
+  # Add "0" to district numbers
+  mutate(District = str_pad(District, 2, pad = "0")) %>%
+  # Change district names
+  mutate(District = paste(State, District, sep = "-")) %>%
+  
+  # Assume that there was 1 ad in districts where there were no ads for one party
+              # Or else the log of the ratio will be infinity
+  mutate(`Pro-Rep Airings` = 
+           if_else(`Pro-Rep Airings` == 0, 1, `Pro-Rep Airings`)) %>%
+  mutate(`Pro-Dem Airings` = 
+           if_else(`Pro-Dem Airings` == 0, 1, `Pro-Dem Airings`)) %>%
+  
+  # Log of ratio
+  mutate(d_ad_log_ratio = log(`Pro-Dem Airings`/`Pro-Rep Airings`)) %>%
+  dplyr::select(District, d_ad_log_ratio)
+```
+
+
+```{r clean incumbency data 2022, include = FALSE}
+incumb_2022_df <- incumb_2022 %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # District numbers
+  mutate(District = str_pad(district, 2, pad = "0")) %>%
+  # Define district names
+  mutate(District = paste(State, District, sep = "-"))
+
+# Change district names
+incumb_2022_df$District[which(incumb_2022_df$District == "AK-AL")] <- "AK-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "DE-AL")] <- "DE-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "WY-AL")] <- "WY-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "VT-AL")] <- "VT-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "ND-AL")] <- "SD-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "SD-AL")] <- "SD-01"
+
+# Democratic incumbent running for re-election
+incumb_2022_df <- incumb_2022_df %>%
+  mutate(d_inc = case_when(cand_party == "Democratic" & incumbent == 1 ~ 1, 
+                           TRUE ~ 0)) %>%
+  filter(d_inc == 1) %>%
+  # Select relevant columns
+  select(District, d_inc) 
+```
+
+
+```{r merge 2022 data, include = FALSE}
+df_2022 <- ratings_2022_df %>%
+  full_join(ads_2022_df, by = "District") %>%
+  full_join(incumb_2022_df, by = "District")
+
+# If there were no ads in a particular district, the Democratic advantage is 0
+df_2022$d_ad_log_ratio[is.na(df_2022$d_ad_log_ratio)] <- 0
+
+# d_inc = 0 if no Democratic incumbent
+df_2022$d_inc[is.na(df_2022$d_inc)] <- 0
+
+# Predicted popular vote share
+df_2022$d_pop_share <- 47.902 # This is the prediction from Blog Post 5
+```
+
+```{r district-level prediction for 2022, include = FALSE}
+df_2022$pred <- predict(model, df_2022, type = "response")
+```
+
+```{r clean cvap data, include = FALSE}
+colnames(cvap_by_2022_cd) <- c("District", "CVAP")
+```
+
+```{r simulated distribution of draws from CVAP, include = FALSE}
+# Number of draws
+draw <- 10000
+
+# List of districts
+district_list <- df_2022$District
+
+# Empty matrix
+sim_D_votes <- matrix(NA, nrow = 435, ncol = draw + 2)
+# First column: Names of districts
+sim_D_votes[,1] <- df_2022$District
+
+set.seed(12345)
+# Get predicted distribution from CVAP in each district
+for(i in 1:length(district_list)){
+  # Second column: CVAP
+  sim_D_votes[i,2] <-cvap_by_2022_cd$CVAP[cvap_by_2022_cd$District == district_list[i]]
+  
+  # Third column and beyond: predicted probability
+  sim_D_votes[i, 3:(draw+2)] <- 
+  rbinom(n = draw,
+         # CVAP of District i
+         size = cvap_by_2022_cd$CVAP[cvap_by_2022_cd$District == district_list[i]], 
+         # Predicted probability for D in District i
+         prob = df_2022$pred[df_2022$District == district_list[i]])
+}
+```
+
+```{r CA 22 distribution, echo = FALSE, message = FALSE, warning = FALSE}
+# Filter out predictions for CA-22
+sim_D_votes[df_2022$District == "CA-22",] %>%
+  tail(draw) %>% # Draw predictions
+  as.numeric() %>%
+  as.tibble() %>%
+  ggplot(aes(x = value)) +
+  geom_histogram(binwidth = 100) +
+  labs(title = "CA-22: Predicted Number of Votes for Democratic Candidate",
+       subtitle = "10,000 Binomial Process Simulations",
+       x = NULL, y = "Frequency")
+```
+
+```{r prepare data frame for plotting, include = FALSE}
+# Filter out predictions for Arizona
+sim_D_votes_az <- sim_D_votes[grep("AZ", df_2022$District),] %>%
+  as_tibble()
+
+# Pivot longer
+colnames(sim_D_votes_az)[1] <- "District"
+colnames(sim_D_votes_az)[2] <- "CVAP"
+sim_D_votes_az <- sim_D_votes_az %>%
+  pivot_longer(cols = 3:(draw + 2)) %>%
+  mutate(value = as.numeric(value))
+```
+
+```{r make grid, include = FALSE, message = FALSE, warning = FALSE}
+az_grid <- data.frame(
+  row = c(1, 1, 2, 2, 3, 3, 3, 4, 4),
+  col = c(1, 3, 1, 2, 1, 2, 3, 1, 3),
+  name = (rep("", 9)),
+  code = c("AZ-09", "AZ-02", "AZ-08", "AZ-01", "AZ-03", "AZ-04", "AZ-05", "AZ-07", "AZ-06"),
+  stringsAsFactors = FALSE
+)
+```
+
+```{r faceted histogram, echo = FALSE, message = FALSE, warning = FALSE}
+ggplot(sim_D_votes_az, aes(x = log(value))) +
+  geom_histogram(bins = 500) +
+  facet_geo(~ District, grid = az_grid) +
+  labs(title = "Predicted Votes Cast for Democratic Candidates",
+        x = "Natural Log of Democratic Votes")
+```
+
+```{r predicted probability, echo = FALSE}
+ggplot(df_2022, aes(x = pred)) +
+  geom_histogram(binwidth = 0.01) +
+  geom_vline(aes(xintercept = 0.5), color = "purple") +
+  theme_bw() +
+  labs(title = "Predicted Probability of Democratic Victory in Each District",
+       x = "Predicted Probability of Democratic Victory",
+       y = "Frequency")
+```
+
+```{r exclude safe seats, echo = FALSE}
+df_2022 %>%
+  filter(rating_avg != 7 & rating_avg != 1) %>%
+  ggplot(aes(x = pred)) +
+  geom_histogram(binwidth = 0.01) +
+  geom_vline(aes(xintercept = 0.5), color = "purple") +
+  theme_bw() +
+  labs(title = "Predicted Probability of Democratic Victory in Each District",
+       subtitle = "Excluding Safe Seats",
+       x = "Predicted Probability of Democratic Victory",
+       y = "Frequency")
+```
+
+```{r count number of predicted Democratic victory, include = FALSE}
+sum(df_2022$pred > 0.5)
+```
+
+```{r count number of Republican victory, include = FALSE}
+435 - sum(df_2022$pred > 0.5)
+```
+
+
+### References
+
+Bafumi, J., Erikson, R., & Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. *PS: Political Science & Politics, 51*(S1), 7-11. doi:10.1017/S1049096518001579
+
+Ballotpedia. (2018). United States House of Representatives elections, 2018. https://ballotpedia.org/United_States_House_of_Representatives_elections,_2018
+
+Ballotpedia. (2022). United States Congress elections, 2022. https://ballotpedia.org/United_States_Congress_elections,_2022
+
+Cook Political Report. (2022). PVI Map and District List. https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
+
+Gerber, A.S., Gimpel, J. G., Green, D. P., & Shaw, D. R. (2011). How Large and Long-lasting Are the Persuasive Effects of Televised Campaign Ads? Results from a Randomized Field Experiment. *American Political Science Review, 105*(1), 135–150. https://doi.org/10.1017/S000305541000047X
+
+Huber, G.A. & Arceneaux, K. (2007). Identifying the Persuasive Effects of Presidential Advertising. *American Journal of Political Science, 51*(4), 957–977. https://doi.org/10.1111/j.1540-5907.2007.00291.x
+
+Wesleyan Media Project. (2022, October 6). Democrats Out-Pacing GOP in Senate Races. https://mediaproject.wesleyan.edu/releases-100622/
+
