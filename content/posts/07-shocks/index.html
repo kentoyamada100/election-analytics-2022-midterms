@@ -1,0 +1,46 @@
+---
+title: "07-Shocks"
+author: "Kento Yamada"
+date: '2022-10-26'
+output: html_document
+---
+
+
+
+<p>In this blog post, I will discuss why a pooled model is more appropriate than fitting a regression for each district, incorporate demographic variables into the model, and simulate a surge among Hispanics in California’s 22nd District.</p>
+<div id="method" class="section level1">
+<h1>Method</h1>
+<p>There are two steps in my prediction model. First, I predict the Democratic two-party vote share and run simulations to obtain 5,000 potential Democratic popular vote shares. Second, I predict how the nation-level vote share translates into district-level vote share. I adopt this approach because fitting a regression for each district by relying on historical data does not work well in districts whose characteristics have changed drastically due to redistricting. In the second part of a model, I fit one regression across all districts to forecast Democratic candidates’ performance relative to the Democrats’ nation-level vote share. This allows us to predict how well Democrats will perform in each district even in cases where the historical data is not predictive of the 2022 elections. For example, California’s 22nd District, the district I am following, used to be a Republican-leaning district prior to redistricting but now is a competitive district. Past data is not useful in this case, but we can rely on data from other districts in the past to forecast how well the Democratic candidate will do in a district whose characteristics are similar to CA-22.</p>
+<div id="nation-level-popular-vote-share" class="section level2">
+<h2>Nation-Level Popular Vote Share</h2>
+<p>Similar to previous blog posts, I predict the president’s party’s popular vote share based on GDP growth, whether the election is a midterm election, and the generic ballot (Table 1). The results of the generic ballot are weighted based on recency. The predicted Democratic two-party popular vote share for 2022 is 48.11 (Confidence Interval: 43.90, 52.32). I next ran 5,000 simulations based on the assumption that the errors are normally distributed, and as seen in Figure 1, the Democrats were predicted to lose the popular vote in all 5,000 simulations.</p>
+<p><img src="table1.png" style="width:50.0%" /></p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20predicted%20dem%20popular%20vote%20share-1.png" width="672" /></p>
+</div>
+<div id="how-does-the-nation-level-vote-share-translate-into-district-level-vote-share" class="section level2">
+<h2>How Does the Nation-Level Vote Share Translate into District-Level Vote Share?</h2>
+<p>The second step of my model is to predict the Democratic candidates’ vote share relative to the national-level Democratic vote share. Polls are useful to forecast district-level vote shares, but since not all districts have high-quality polling, I built one model that does not take into account polls and another model that incorporates polls. As seen in Table 2, the model that does not incorporate polls (Model 2a) suggests that expert ratings, TV ads, incumbency, and demographics all have an impact on the Democrats’ district-level performance. Higher shares of Hispanic, black, and Asian populations all have a positive and significant impact. Note that the negative coefficient on expert ratings makes sense because the ratings are on a 7-point scale, with larger values indicating a more Republican-leaning district. The model that incorporates polls (Model 2b) suggests that a better performance in the polls has a positive and significant impact on the Democrat’s actual performance in the election. Demographic variables do not seem to have a significant impact, which could be because polls are correlated with the district’s characteristics such as demographics.</p>
+<p><img src="table2.png" /></p>
+</div>
+<div id="surges" class="section level2">
+<h2>Surges</h2>
+<p>Unexpected events can have an impact on elections. For example, voters may punish the incumbent party for damage caused by natural disasters (Healy &amp; Malhotra, 2010). Some argue that voters punish incumbents irrationally for events that are out of the control of politicians such as shark attacks (Achen &amp; Bartels, 2017) although this theory has been challenged by others (Fowler &amp; Hall, 2018).</p>
+<p>In Figure 2, I simulated how a surge among Hispanics will impact the Democratic vote share in CA-22, where Hispanics account for nearly 60% of the voting-age population (Dave’s Redistricting, 2022). For each of the 5,000 simulated Democratic popular vote share (Figure 1), I used Model 2b (Table 2) to predict how those will translate into the Democratic vote share in CA-22. When I doubled the coefficient on the Hispanic share of the population, the mean of the predicted Democratic vote share rose by more than 1 percentage point. When I halved the coefficient on the Hispanic share of the population, the mean of the predicted Democratic vote share declined by less than 1 percentage point.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/ca-22%20prediction-1.png" width="672" /></p>
+</div>
+<div id="predicted-number-of-seats-won-by-democrats" class="section level2">
+<h2>Predicted Number of Seats Won By Democrats</h2>
+<p>Lastly, I used Models 2a and 2b to predict how the 5,000 simulated nation-level vote shares translate into the Democratic vote shares at the district-level. Note that the data on expert ratings was retrieved from Ballotpedia (2022), the data on ads spending was retrieved from the Wesleyan Media Project (2022), and the data on demographics aggregated to the 2022 district-level was retrieved from Dave’s Redistricting (2022).</p>
+<p>The median number of predicted Democratic seats was 185, and Democrats were predicted to lose the majority in all of the 5,000 simulations. One limitation of my method is that ultimately, the predictions for the number of seats that Democrats will win depends a lot on the Model 1. A small change in the predicted Democratic vote share based on Model 1 could change the predicted number of Democratic seats.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20predicted%20dem%20seats-1.png" width="672" /></p>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Achen, C. H. &amp; Bartels, L. M. (2017). <em>Democracy for realists :why elections do not produce responsive government.</em> Princeton University Press.</p>
+<p>Ballotpedia. (2022). United States Congress elections, 2022. <a href="https://ballotpedia.org/United_States_Congress_elections,_2022" class="uri">https://ballotpedia.org/United_States_Congress_elections,_2022</a></p>
+<p>Dave’s Redistricting. (2022). <a href="https://davesredistricting.org/maps#home" class="uri">https://davesredistricting.org/maps#home</a></p>
+<p>Fowler, A. &amp; Hall, A. B. (2018). Do Shark Attacks Influence Presidential Elections? Reassessing a Prominent Finding on Voter Competence. <em>The Journal of Politics, 80</em>(4), 1423–1437. <a href="https://doi.org/10.1086/699244" class="uri">https://doi.org/10.1086/699244</a></p>
+<p>Healy, A. &amp; Malhotra, N. (2010). Random Events, Economic Losses, and Retrospective Voting: Implications for Democratic Competence. <em>Quarterly Journal of Political Science, 5</em>(2), 193–208. <a href="https://doi.org/10.1561/100.00009057" class="uri">https://doi.org/10.1561/100.00009057</a></p>
+<p>Wesleyan Media Project. (2022, October 6). Democrats Out-Pacing GOP in Senate Races. <a href="https://mediaproject.wesleyan.edu/releases-100622/" class="uri">https://mediaproject.wesleyan.edu/releases-100622/</a></p>
+</div>
+</div>
+</div>
