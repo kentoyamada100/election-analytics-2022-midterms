@@ -73,8 +73,8 @@ My model to predict the Democratic popular vote share is as follows:
 The independent variables are as follows:
 
 * **Midterm**: The president’s party has lost seats in the House in all but 3 midterm elections since 1900 (Campbell, 2018, p.1). We can expect that the President’s party’s popular vote share tends to be lower in a midterm election.
-* **Democrat's lead in the generic ballot**: The literature suggests that the generic ballot is highly predictive of the outcomes of House elections (Abramowitz, 2018; Bafumi et al., 2018). Since polls tend to converge to the actual outcome closer to the election, I calculate the weighted average of the Democrat's lead in generic ballot polls based on the recency of the poll (Gelman & King, 1993). I dropped the results of polls conducted prior to election year and gave each poll the following weight: (365 – number of days the poll was conducted before election day).
-* Although studies have suggested that short-term economic growth prior to the election helps predict the popular vote share of the President’s party, I do not include any economic variables (Achen & Bartels, 2017).  As I demonstrated in [Blog Post 03](https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/03-polling/), if  the generic ballot is incorporated in the model, economic variables do not increase the model fit because the generic ballot and economic variables are correlated. 
+* **President's party's lead in the generic ballot**: The literature suggests that the generic ballot is highly predictive of the outcomes of House elections (Abramowitz, 2018; Bafumi et al., 2018). Since polls tend to converge to the actual outcome closer to the election, I calculate the weighted average of the president's party's lead in generic ballot polls based on the recency of the poll (Gelman & King, 1993). I dropped the results of polls conducted prior to election year and gave each poll the following weight: (365 – number of days the poll was conducted before election day).
+* Although studies have suggested that short-term economic growth prior to the election helps predict the popular vote share of the president’s party, I do not incorporate any economic variables into my model (Achen & Bartels, 2017).  As I demonstrated in [Blog Post 03](https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/03-polling/), if  the generic ballot is incorporated in the model, economic variables do not increase the model fit because the generic ballot and economic variables are correlated. 
 
 ```{r clean gdp_df, include = FALSE}
 # Select relevant columns
@@ -187,7 +187,7 @@ stargazer(model_national_1,
           title = "Table 1: Two-Party Popular Vote Share",
           column.labels = "Model 1: Nation-Level",
           dep.var.labels   = "President's Party's Vote Share",
-          covariate.labels = c('Midterm', "Generic Ballot"),
+          covariate.labels = c('Midterm', "Generic Ballot Lead"),
           model.numbers = FALSE) %>%
   save_kable(file = "static/posts/08-final/table1.png",
              zoom = 2.5)
@@ -195,7 +195,7 @@ stargazer(model_national_1,
 
 ![](table1.png){width=50%}
 
-As expected, both variables are significant predictors of the President’s party’s vote share. All else equal, in a midterm election, the president’s party’s popular vote share declines by -1.34 points, and a 1 point increase in the president's party's lead in the generic ballot is associated with a 0.25 point increase in the president’s party’s popular vote share.
+As expected, both variables are significant predictors of the president’s party’s vote share. All else equal, in a midterm election, the president’s party’s popular vote share declines by -1.34 points, and a 1 point increase in the president's party's lead in the generic ballot is associated with a 0.25 point increase in the president’s party’s popular vote share.
 
 ### Model Validation
 ##### In-Sample Model Fit
