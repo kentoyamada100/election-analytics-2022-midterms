@@ -1,0 +1,119 @@
+---
+title: "08-Final Prediction"
+author: "Kento Yamada"
+date: '2022-11-07'
+output: html_document
+---
+
+
+
+<div id="overview-of-method" class="section level2">
+<h2>Overview of Method</h2>
+<p>Similar to Bafumi et al. (2018), my model consists of two steps. First, I predict the Democratic popular vote share and run simulations to obtain a set of 5,000 potential outcomes at the nation-level (Model 1). Second, I predict the Democratic performance in each district relative to the nation-level Democratic performance (Model 2a, 2b). In the second step, the dependent variable of my model is the ratio between the Democratic vote share in a district in election <em>t</em> and the Democratic popular vote share in election <em>t</em>. In other words, I build a model to predict the extent to which the Democratic candidate in each district overperforms or underperforms relative to the nation-level Democratic vote share. To predict the Democratic vote share in each district, I multiply the predicted Democratic performance relative to the Democratic popular vote share by each one of the 5,000 simulated Democratic popular vote shares obtained in Step 1.</p>
+<p>This method allows me to fully take into account the impact of redistricting. Especially in districts whose composition of the electorate changed greatly due to redistricting, it is inappropriate to rely on district-level historical data to predict the outcomes in 2022. In the second step of my model, I use a pooled model whereby I fit one regression across all districts instead of fitting a regression for each district. This means that the prediction for a certain district is based on historical data from different districts instead of the historical data in that particular district. Thus, even if the characteristics of a certain district changed greatly due to redistricting, we can rely on historical data from all districts to predict how well a Democratic candidate will perform in that district relative to the nation-level Democratic performance.</p>
+</div>
+<div id="step-1-predict-the-nation-level-outcome" class="section level2">
+<h2>Step 1: Predict the Nation-Level Outcome</h2>
+<div id="model-1-predicting-the-democratic-popular-vote-share" class="section level3">
+<h3>Model 1: Predicting the Democratic Popular Vote Share</h3>
+<p>My model to predict the Democratic popular vote share is as follows:
+<img src="model_spec_1.png" /></p>
+<p>The independent variables are as follows:</p>
+<ul>
+<li><strong>Midterm</strong>: The president’s party has lost seats in the House in all but 3 midterm elections since 1900 (Campbell, 2018, p.1). We can expect that the President’s party’s popular vote share tends to be lower in a midterm election.</li>
+<li><strong>Democrat’s lead in the generic ballot</strong>: The literature suggests that the generic ballot is highly predictive of the outcomes of House elections (Abramowitz, 2018; Bafumi et al., 2018). Since polls tend to converge to the actual outcome closer to the election, I calculate the weighted average of the Democrat’s lead in generic ballot polls based on the recency of the poll (Gelman &amp; King, 1993). I dropped the results of polls conducted prior to election year and gave each poll the following weight: (365 – number of days the poll was conducted before election day).</li>
+<li>Although studies have suggested that short-term economic growth prior to the election helps predict the popular vote share of the President’s party, I do not include any economic variables (Achen &amp; Bartels, 2017). As I demonstrated in <a href="https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/03-polling/">Blog Post 03</a>, if the generic ballot is incorporated in the model, economic variables do not increase the model fit because the generic ballot and economic variables are correlated.</li>
+</ul>
+<p><img src="table1.png" style="width:50.0%" /></p>
+<p>As expected, both variables are significant predictors of the President’s party’s vote share. All else equal, in a midterm election, the president’s party’s popular vote share declines by -1.34 points, and a 1 point increase in the president’s party’s lead in the generic ballot is associated with a 0.25 point increase in the president’s party’s popular vote share.</p>
+</div>
+<div id="model-validation" class="section level3">
+<h3>Model Validation</h3>
+<div id="in-sample-model-fit" class="section level5">
+<h5>In-Sample Model Fit</h5>
+<p>The adjusted R-squared of Model 1 is 0.805. As seen in Figure 1, the predicted values based on Model 1 roughly match the actual values. The root-mean-squared error (RMSE) is 1.45.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/model_national_1%20Actual%20Values%20vs%20Predicted%20Values-1.png" width="672" /></p>
+</div>
+<div id="out-of-sample-testing" class="section level5">
+<h5>Out-Of-Sample Testing</h5>
+<p>I test how well Model 1 predicts the Republican vote share in 2018 after holding out the 2018 election. The error is 1.005. I also conduct 1000 runs of cross-validation by randomly withholding 8 observations in each iteration, fitting the model on the rest of the observations, and evaluating how well the model predicts the observations that were held out. Figure 2 shows the distribution of the mean of the residual in each run. The mean of the residual tends to be between -1 and 1.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20cross-validation%20model_national_1-1.png" width="672" /></p>
+</div>
+</div>
+<div id="prediction-for-2022" class="section level3">
+<h3>Prediction for 2022</h3>
+<p>Based on Model 1, the predicted Democratic popular vote share in 2022 is 48.52. The prediction interval is [45.36, 51.68] . Data on the latest generic ballot polls was retrieved from FiveThirtyEight (2022) on November 5. The polls are weighted based on recency in the same way as described above.</p>
+<p>Lastly, I obtain a set of 5,000 potential Democratic popular vote share by drawing a sample of size 5,000 from a normal distribution whose mean is the predicted Democratic vote share and whose standard deviation is the RMSE of Model 1. Democrats are predicted to win the popular vote in only 749 of the 5,000 simulations (Figure 3).</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20predicted%20dem%20popular%20vote%20share-1.png" width="672" /></p>
+</div>
+</div>
+<div id="step-2-predict-the-district-level-democratic-performance-relative-to-the-popular-vote-share" class="section level2">
+<h2>Step 2: Predict the District-Level Democratic Performance Relative to the Popular Vote Share</h2>
+<p>Next, I predict the district-level Democratic vote share relative to the Democratic popular vote share. The dependent variable is the ratio between the Democratic vote share in a district and the Democratic popular vote share. For this step, I build two models: one for districts where polling data is not available (Model 2a) and another for districts where polling data is available (Model 2b).</p>
+<div id="model-2a-without-polls" class="section level3">
+<h3>Model 2a: Without Polls</h3>
+<p>My model for districts where polling data is not available is:</p>
+<p><img src="model_spec_2a.png" /></p>
+<p>This model is based on the district-level outcomes in the 2014 and 2018 midterm elections. The independent variables are the following:</p>
+<ul>
+<li><strong>Democratic Presidential Candidate’s Vote Share in the Most Recent Presidential Election</strong>: This variable is included based on the assumption that Clinton’s vote share in the 2016 Presidential election in a certain district is correlated with the Democrat’s vote share in 2018 in that district and that Obama’s 2012 district-level vote share is correlated with the Democrat’s district-level vote share in 2014. Data was retried from the Daily Kos (Nir, 2020).</li>
+<li><strong>Expert Rating</strong>: I take the average of the ratings of the Cook Political Report, Inside Elections, and Sabato’s Crystal Ball. The ratings were converted in to a 7-point scale, with 7 being “Solid/Safe Republican,” 4 being “Toss-up”, and 1 being “Solid/Safe Democrat.” If data on ratings was unavailable, I assumed that the actual outcome was what the experts had expected before the election. (i.e. 7 if a Republican won and 1 if a Democrat won.) This is a valid assumption because the districts where ratings are not available are safe seats.</li>
+<li><strong>Incumbent</strong>: I assume that compared to a Democratic challenger, a Democratic incumbent is more likely to perform better relative to the Democratic popular vote share.</li>
+<li>I excluded did not incorporate data on ads because as shown in <a href="https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/05-air-war/">Blog Posts 05</a> and <a href="https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/06-ground-game/">06</a>, ads seem to have a weak or statistically insignificant impact on district-level outcomes.</li>
+</ul>
+</div>
+<div id="model-2b-with-polls" class="section level3">
+<h3>Model 2b: With Polls</h3>
+<p>My model for districts where polling data is available is:</p>
+<p><img src="model_spec_2b.png" /></p>
+<p>The independent variables are the following:</p>
+<ul>
+<li><strong>Democratic candidate’s lead in polls</strong>: I calculate the Democratic candidate’s lead in the polls and for each district, I take the weighted average based on the recency of the poll. The weights for recency are the same as the weights I used in Model 1.</li>
+<li><strong>Democratic Presidential Candidate’s Vote Share in Most Recent Presidential Election</strong></li>
+<li><strong>Democratic Incumbent</strong></li>
+</ul>
+<p><img src="table2.png" /></p>
+<p>For both Model 2a and 2b, all the variables seem to be significant predictors. The magnitudes of the coefficients are hard to interpret because the dependent variable is a ratio measuring the district-level Democratic performance relative to the popular vote share. Note that the negative coefficient on expert ratings makes sense because a larger value of the exert ratings means that the Republican candidate was favored to win.</p>
+<div id="model-validation-1" class="section level4">
+<h4>Model Validation</h4>
+<div id="in-sample-model-fit-1" class="section level5">
+<h5>In-Sample Model Fit</h5>
+<p>The adjusted R-squared is 0.775 for Model 2a and 0.892 for Model 2b. As seen in Figures 4 and 5, the in-sample errors are centered around 0 for both Models 2a and 2b, but the range of the in-sample-errors is larger for Model 2a. This makes sense because Model 2b incorporates polling data while Model 2a does not, which should make Model 2b more accurate. The in-sample RMSE for Model 2a is 0.23 and the in-sample RMSE for Model 2b is 0.05.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/in-sample%20fit%20model_district_1-1.png" width="672" /></p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/in-sample%20fit%20model_district_2-1.png" width="672" /></p>
+</div>
+<div id="out-of-sample-testing-1" class="section level5">
+<h5>Out-Of-Sample Testing</h5>
+<p>For Model 2a, I conduct 1000 runs of cross-validation by randomly withholding 100 observations in each iteration, fitting the model on the rest, and evaluating how well the model predicts the held-out observations. I do the same for Model 2b except I withhold 30 observations in each iteration. Figure 6 and 7 show the distribution of the out-of-sample RMSE. Not surprisingly, the size of the out-of-sample RMSE tends to be larger for Model 2a. The distribution is somewhat left-skewed for Model 2b.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20cross-validation%20model_district_1-1.png" width="672" /></p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20cross-validation%20model_national_2-1.png" width="672" /></p>
+</div>
+</div>
+</div>
+</div>
+<div id="district-level-prediction-for-2022" class="section level2">
+<h2>District-Level Prediction for 2022</h2>
+<p>To predict the district-level outcomes, first, I use Models 2a and 2b to predict the extent to which the Democratic candidate in each district is predicted to overperform/underperform relative to the nation-level Democratic vote share. Data on expert ratings is based on Ballotpedia (2022) as well as the data provided in class. Data on Joe Biden’s vote share in each post-redistricting district was retried from Dave’s Redistricting (2022). Next, I obtain a set of 5,000 potential Democratic vote shares in each district by multiplying the predicted ratio in each district by the 5,000 potential Democratic popular vote shares obtained in Step 1. In doing so, I add a disturbance that is randomly drawn from a normal distribution whose mean is 0 and whose standard deviation is the in-sample RMSE of Model 2a and Model 2b in order to take into account the uncertainty in Step 2 of my model.</p>
+<p>Through these steps, I obtain a set of 5,000 simulated outcomes, and for each of the 5,000 simulations, I count the number of districts where Democrats are predicted to win (Figure 8). The median of the predicted number Democratic seats is 198. Democrats are predicted to retain their majority in the House in 427 out of the 5,000 simulations, meaning that they are likely to lose their majority in the House.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/plot%20predicted%20dem%20seats-1.png" width="672" /></p>
+<div id="competitive-districts" class="section level3">
+<h3>Competitive Districts</h3>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/ca-22-1.png" width="672" /></p>
+<p>The advantage of my model is that I can obtain a set of potential district-level vote shares for each district, taking into account the uncertainty in both Model 1 and Model 2a/2b.
+In California’s 22nd Congressional District, the median of the predicted Democratic vote share is 49.78 and Rudy Salas (D) is predicted to win in 2300 out of the 5000 simulations (Figure 7). This suggests that the race is a pure toss-up.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/Figure%203-1.png" width="672" /></p>
+<p>Figure 10 shows the distribution of the predicted Democratic vote shares in 30 competitive districts. The median of the predicted Democratic vote share is larger than 50 in 7 out of the 30 districts, meaning that Republicans may be slightly favored to win in most of the competitive districts. However, in all 30 districts, a Democratic two-party vote share of 50 is well within the range of the simulated Democratic vote shares, which confirms that the 30 districts are all competitive races that could go either way. Note that the range of the distribution is wider for districts where polling data was not readily available (e.g., AK-01, AZ-02). This makes sense because Model 2a yields larger errors, meaning that the size of the randomly generated disturbance tends to be larger.</p>
+</div>
+<div id="references" class="section level3">
+<h3>References</h3>
+<p>Abramowitz, A. (2018). Will Democrats Catch a Wave? The Generic Ballot Model and the 2018 US House Elections. <em>PS: Political Science &amp; Politics, 51</em>(S1), 4-6. <a href="doi:10.1017/S1049096518001567" class="uri">doi:10.1017/S1049096518001567</a></p>
+<p>Achen, C. H. &amp; Bartels, L. M. (2017). <em>Democracy for realists :why elections do not produce responsive government.</em> Princeton University Press.</p>
+<p>Bafumi, J., Erikson, R., &amp; Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. PS: Political Science &amp; Politics, 51(S1), 7-11. <a href="doi:10.1017/S1049096518001579" class="uri">doi:10.1017/S1049096518001579</a></p>
+<p>Ballotpedia. (2022). United States Congress elections, 2022. <a href="https://ballotpedia.org/United_States_Congress_elections,_2022" class="uri">https://ballotpedia.org/United_States_Congress_elections,_2022</a></p>
+<p>Campbell, J. (2018). Introduction: Forecasting the 2018 US Midterm Elections. <em>PS: Political Science &amp; Politics, 51</em>(S1), 1-3. <a href="doi:10.1017/S1049096518001592" class="uri">doi:10.1017/S1049096518001592</a></p>
+<p>Dave’s Redistricting. (2022). <a href="https://davesredistricting.org/maps#home" class="uri">https://davesredistricting.org/maps#home</a></p>
+<p>FiveThirtyEight. (2022, November 5). Do Voters Want Republicans or Democrats in Congress? <a href="https://projects.fivethirtyeight.com/polls/generic-ballot/" class="uri">https://projects.fivethirtyeight.com/polls/generic-ballot/</a></p>
+<p>Gelman, A., &amp; King, G. (1993). Why Are American Presidential Election Campaign Polls So Variable When Votes Are So Predictable? <em>British Journal of Political Science, 23</em>(4), 409–451. <a href="https://doi.org/10.1017/S0007123400006682" class="uri">https://doi.org/10.1017/S0007123400006682</a></p>
+<p>Nir, D. (2020, November 19). Daily Kos Elections’ presidential results by congressional district for 2020, 2016, and 2012. <em>Daily Kos.</em> <a href="https://www.dailykos.com/stories/2012/11/19/1163009/-Daily-Kos-Elections-presidential-results-by-congressional-district-for-the-2012-2008-elections" class="uri">https://www.dailykos.com/stories/2012/11/19/1163009/-Daily-Kos-Elections-presidential-results-by-congressional-district-for-the-2012-2008-elections</a></p>
+</div>
+</div>

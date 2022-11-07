@@ -1,0 +1,1099 @@
+---
+title: "08-Final Prediction"
+author: "Kento Yamada"
+date: '2022-11-07'
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
+```
+
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(readxl)
+library(sf)
+library(stringi)
+library(kableExtra)
+library(stargazer)
+library(usdata)
+```
+
+```{r load data, include = FALSE}
+# Data on GDP/quarter
+gdp <- read_csv("analysis_data/GDP_quarterly.csv") %>%
+  select(-c("...1", "...2")) # de-select unnecessary columns
+
+# Data on vote/seat share
+share <- read_csv("analysis_data/house_popvote_seats.csv") %>%
+  select(-c("...1", "AreaAll")) # de-select unnecessary columns
+
+# Generic ballot
+generic <- read_csv("analysis_data/GenericPolls1942_2020_updated.csv")
+# 2022 generic ballot
+recent_generic <- read_csv("analysis_data/1105_538_generic_ballot_polls.csv")
+
+# Expert ratings
+ratings <- read_csv("analysis_data/expert_rating.csv")
+# Expert ratings data for 2022
+ratings_2022 <- read_excel("analysis_data/expert_ratings_2022.xlsx")
+# Latest expert ratings data
+ratings_2022_10_27 <- read_csv("analysis_data/expert_rating_2022-10-27.csv")
+
+# Vote share by district
+vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
+
+# Vote share in Presidential elections
+pres_vote_share_2016 <- read_csv("analysis_data/kos_2016_pres_2018_districts.csv", skip = 1)
+pres_vote_share_2012 <- read_csv("analysis_data/kos_2012_pres_2014_districts.csv")
+pres_vote_share_2020 <-  read_csv("analysis_data/dra_2020_pres.csv") %>%
+  select(-"...1")
+
+# Incumbency
+incumb <- read_csv("analysis_data/incumb_dist_1948-2020.csv")
+incumb_2022 <- read_csv("analysis_data/house_cands.csv")
+
+# District-level polls
+district_polls <- read_csv("analysis_data/house_polls_long.csv")
+```
+
+## Overview of Method
+Similar to Bafumi et al. (2018), my model consists of two steps. First, I predict the Democratic popular vote share and run simulations to obtain a set of 5,000 potential outcomes at the nation-level (Model 1). Second, I predict the Democratic performance in each district relative to the nation-level Democratic performance (Model 2a, 2b). In the second step, the dependent variable of my model is the ratio between the Democratic vote share in a district in election *t* and the Democratic popular vote share in election *t*. In other words, I build a model to predict the extent to which the Democratic candidate in each district overperforms or underperforms relative to the nation-level Democratic vote share. To predict the Democratic vote share in each district, I multiply the predicted Democratic performance relative to the Democratic popular vote share by each one of the 5,000 simulated Democratic popular vote shares obtained in Step 1.
+
+This method allows me to fully take into account the impact of redistricting. Especially in districts whose composition of the electorate changed greatly due to redistricting, it is inappropriate to rely on district-level historical data to predict the outcomes in 2022. In the second step of my model, I use a pooled model whereby I fit one regression across all districts instead of fitting a regression for each district. This means that the prediction for a certain district is based on historical data from different districts instead of the historical data in that particular district. Thus, even if the characteristics of a certain district changed greatly due to redistricting, we can rely on historical data from all districts to predict how well a Democratic candidate will perform in that district relative to the nation-level Democratic performance.
+
+
+## Step 1: Predict the Nation-Level Outcome
+### Model 1: Predicting the Democratic Popular Vote Share
+
+My model to predict the Democratic popular vote share is as follows:
+![](model_spec_1.png)
+
+The independent variables are as follows:
+
+* **Midterm**: The president’s party has lost seats in the House in all but 3 midterm elections since 1900 (Campbell, 2018, p.1). We can expect that the President’s party’s popular vote share tends to be lower in a midterm election.
+* **Democrat's lead in the generic ballot**: The literature suggests that the generic ballot is highly predictive of the outcomes of House elections (Abramowitz, 2018; Bafumi et al., 2018). Since polls tend to converge to the actual outcome closer to the election, I calculate the weighted average of the Democrat's lead in generic ballot polls based on the recency of the poll (Gelman & King, 1993). I dropped the results of polls conducted prior to election year and gave each poll the following weight: (365 – number of days the poll was conducted before election day).
+* Although studies have suggested that short-term economic growth prior to the election helps predict the popular vote share of the President’s party, I do not include any economic variables (Achen & Bartels, 2017).  As I demonstrated in [Blog Post 03](https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/03-polling/), if  the generic ballot is incorporated in the model, economic variables do not increase the model fit because the generic ballot and economic variables are correlated. 
+
+```{r clean gdp_df, include = FALSE}
+# Select relevant columns
+gdp_df_relevant <- gdp %>%
+  select(year, quarter_cycle, GDPC1)
+
+# Filter out data for Q1
+gdp_df_q1 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 1) %>%
+  # Note that election years are one year after Q1
+  mutate(election_year = year + 1) %>% 
+  rename(gdp_q1 = GDPC1) %>%
+  select(-c(quarter_cycle, year))
+
+# Filter out data for Q6
+gdp_df_q6 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 6) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q6 = GDPC1, election_year = year)
+
+# Filter out data for Q7
+gdp_df_q7 <- gdp_df_relevant %>%
+  filter(quarter_cycle == 7) %>%
+  select(-quarter_cycle) %>%
+  rename(gdp_q7 = GDPC1, election_year = year)
+
+# Merge and finalize data
+gdp_df_final <- left_join(gdp_df_q7, gdp_df_q6, by = "election_year") %>%
+  left_join(gdp_df_q1, by = "election_year") %>%
+  mutate(gdp_q7_q6 = (gdp_q7 - gdp_q6) / gdp_q6 * 100,
+         gdp_q7_q1 = (gdp_q7 - gdp_q1) / gdp_q1 * 100) %>%
+  select(-c(gdp_q7, gdp_q6, gdp_q1))
+```
+
+```{r clean share_df, include = FALSE}
+# Define incumbent president's party affiliation
+share_df <- share
+# In a Presidential election year, share_df$president_party shows the party 
+# of the candidate who won the Presidential election.
+# Thus, in cases where the party that the incumbent president belongs to
+# loses the Presidential election,
+# share_df$president_party is different from the incumbent president's party
+share_df$inc_pres_party <- share_df$president_party
+share_df$inc_pres_party[which(share_df$year == 1952)] <- "D"
+share_df$inc_pres_party[which(share_df$year == 1960)] <- "R"
+share_df$inc_pres_party[which(share_df$year == 1968)] <- "D"
+share_df$inc_pres_party[which(share_df$year == 1976)] <- "R"
+share_df$inc_pres_party[which(share_df$year == 1980)] <- "D"
+share_df$inc_pres_party[which(share_df$year == 1992)] <- "R"
+share_df$inc_pres_party[which(share_df$year == 2000)] <- "D"
+share_df$inc_pres_party[which(share_df$year == 2008)] <- "R"
+share_df$inc_pres_party[which(share_df$year == 2016)] <- "D"
+share_df$inc_pres_party[which(share_df$year == 2020)] <- "R"
+
+share_df_final <- share_df %>%
+  mutate(pp_vote_share = # Two-party vote share of the incumbent President's party
+           case_when(inc_pres_party == "D" ~ D_majorvote_pct,
+                     inc_pres_party == "R" ~ R_majorvote_pct),
+         midterm = # Midterm election or not
+           case_when(year %% 4 == 0 ~ FALSE,
+                     year %% 4 == 2 ~ TRUE)) %>%
+  select(year, pp_vote_share, midterm, 
+         inc_pres_party, president_party) %>%
+  rename(election_year = year)
+```
+
+```{r clean generic_df, include = FALSE }
+generic_df <- generic %>%
+  # Filter out election year and discard polls conducted after election
+  filter(year %% 2 == 0) %>%
+  filter(days_until_election > 0, days_until_election < 365) %>%
+  select(year, emonth, eday, dem, rep, days_until_election) %>%
+  rename(dem_poll = dem, rep_poll = rep) %>%
+  # calculate poll lead
+  mutate(dem_lead = dem_poll - rep_poll) %>%
+  # add weights
+  mutate(recency = 365 - days_until_election)
+```
+
+```{r generic_df_df_final, include = FALSE}
+generic_df_final <- generic_df %>%
+  # calculate weighted average
+  group_by(year) %>%
+  # Add weights
+  summarize(dem_lead_weighted = weighted.mean(dem_lead, recency)) %>%
+  rename(election_year = year)
+```
+
+```{r finalize df_national, include = FALSE}
+df_national <- full_join(gdp_df_final, share_df_final, by = "election_year") %>%
+  full_join(generic_df_final, by = "election_year")
+
+# Calculate polling data for President's party
+df_national <- df_national %>%
+  # Lead in the generic ballot poll of the incumbent President's party
+  mutate(pp_generic_lead= 
+           case_when(inc_pres_party == "D" ~ dem_lead_weighted,
+                     inc_pres_party == "R" ~ -dem_lead_weighted))
+```
+
+
+```{r model_national_1, include = FALSE}
+model_national_1 <- lm(pp_vote_share ~ midterm + pp_generic_lead, 
+             data = df_national)
+```
+
+```{r regression output 1, include = FALSE}
+stargazer(model_national_1,
+          type = 'html',
+          title = "Table 1: Two-Party Popular Vote Share",
+          column.labels = "Model 1: Nation-Level",
+          dep.var.labels   = "President's Party's Vote Share",
+          covariate.labels = c('Midterm', "Generic Ballot"),
+          model.numbers = FALSE) %>%
+  save_kable(file = "static/posts/08-final/table1.png",
+             zoom = 2.5)
+```
+
+![](table1.png){width=50%}
+
+As expected, both variables are significant predictors of the President’s party’s vote share. All else equal, in a midterm election, the president’s party’s popular vote share declines by -1.34 points, and a 1 point increase in the president's party's lead in the generic ballot is associated with a 0.25 point increase in the president’s party’s popular vote share.
+
+### Model Validation
+##### In-Sample Model Fit
+
+```{r rmse_model_national_1, include = FALSE}
+# RMSE: sqrt(mean(resid(model_national_1)^2))
+rmse_model_national_1 <- 
+  (model_national_1$model$pp_vote_share - 
+                            model_national_1$fitted.values)^2 %>%
+  mean() %>% 
+  sqrt()
+```
+
+The adjusted R-squared of Model 1 is `r round(summary(model_national_1)$adj.r.squared, 3)`. As seen in Figure 1, the predicted values based on Model 1 roughly match the actual values. The root-mean-squared error (RMSE) is `r round(rmse_model_national_1, 2)`.
+
+```{r model_national_1 Actual Values vs Predicted Values, echo = FALSE}
+plot(drop_na(df_national)$election_year, drop_na(df_national)$pp_vote_share,
+     type = "l",
+     xlab = "Year", ylab = "President's Party's Two-Party Vote Share",
+     main = "Figure 1: Actual vs Predicted Popular Vote Share")
+
+# Predicted values based on model_national_1
+lines(drop_na(df_national)$election_year, 
+      as.numeric(na.omit(predict(model_national_1, df_national))), 
+      col = "red", lty = "dotted")
+
+# Add Legend
+legend(2005, 57, legend=c("Actual", "Predicted"),
+       col=c("black", "red"), 
+       lty= c(1, 3), cex = 0.7)
+```
+
+##### Out-Of-Sample Testing
+
+```{r out-of-sample model_national_1, include = FALSE}
+os_model_national_1<- 
+  lm(pp_vote_share ~ midterm + pp_generic_lead, 
+     data = df_national[df_national$election_year != 2018,])
+
+# Predict 2018 outcomes
+os_model_national_1_pred <-
+  predict(os_model_national_1, df_national[df_national$election_year == 2018,])
+
+# Calculate difference between predicted value and true value
+os_model_national_1_true <- df_national$pp_vote_share[df_national$election_year == 2018]
+os_model_national_1_true_error <- os_model_national_1_pred - os_model_national_1_true
+```
+
+I test how well Model 1 predicts the Republican vote share in 2018 after holding out the 2018 election. The error is `r round(os_model_national_1_true_error, 3)`. I also conduct 1000 runs of cross-validation by randomly withholding 8 observations in each iteration, fitting the model on the rest of the observations, and evaluating how well the model predicts the observations that were held out. Figure 2 shows the distribution of the mean of the residual in each run. The mean of the residual tends to be between -1 and 1.
+
+```{r cross-validation model_national_1, include = FALSE}
+set.seed(2022)
+cv_model_national_1_error <- 
+  sapply(1:1000, function(i){
+    # Randomly hold out 8 observations
+    years_outsamp <- sample(drop_na(df_national)$election_year, 8) 
+    
+    # Linear regression based on the remaining observations
+    outsamp_mod <- lm(pp_vote_share ~ midterm + pp_generic_lead, 
+                    df_national[!(df_national$election_year %in% years_outsamp),])
+    
+    # Make predictions based on the model
+    outsamp_pred <- 
+      predict(outsamp_mod,
+              df_national[df_national$election_year %in% years_outsamp,])
+    
+    # True values
+    outsamp_true <- df_national$pp_vote_share[df_national$election_year 
+                                                       %in% years_outsamp]
+    
+    mean(outsamp_pred - outsamp_true)
+})
+```
+
+```{r plot cross-validation model_national_1, echo = FALSE}
+ggplot(mapping = aes(cv_model_national_1_error)) +
+  geom_histogram(binwidth = 0.5, boundary = 0) +
+  labs(title = "Figure 2: Mean Out-Of-Sample Residual",
+       subtitle = "1000 Runs of Cross Validation",
+       x = NULL, y = "Frequency") +
+  theme_light()
+```
+
+
+### Prediction for 2022
+
+```{r clean 2022 generic ballot data, include = FALSE}
+recent_generic_df <- recent_generic %>%
+  select(end_date, dem, rep) %>%
+  mutate(end_date = as.Date(end_date, "%m/%d/%y")) %>%
+  mutate(days_until_election = round(difftime("2022-11-8", end_date, units = "days"))) %>%
+  # Filter out 2022
+  filter(end_date >= "2022-01-01") %>%
+  mutate(dem_lead = dem - rep) %>%
+  # add weights
+  mutate(recency = 365 - as.numeric(days_until_election))
+```
+
+```{r recent_generic_df, include = FALSE}
+recent_generic_final <- recent_generic_df %>%
+  # calculate weighted average
+  summarize(pp_generic_lead = weighted.mean(dem_lead, recency))
+```
+
+```{r predictions, include = FALSE}
+# Get data for 2022
+latest_data <- 
+  data.frame(midterm = TRUE, 
+             pp_generic_lead = recent_generic_final$pp_generic_lead)
+```
+
+
+```{r predict popular vote share, include = FALSE}
+# Prediction
+model_national_1_pred <- predict.lm(model_national_1, latest_data, interval = "prediction")
+
+# simulations
+set.seed(12345)
+nsims = 5000
+model_national_1_pred_w_error <- 
+  rnorm(nsims, mean = model_national_1_pred[1], sd = rmse_model_national_1)
+```
+
+Based on Model 1, the predicted Democratic popular vote share in 2022 is `r round(model_national_1_pred[1], 2)`. The prediction interval is [`r round(model_national_1_pred[2], 2)`, `r round(model_national_1_pred[3], 2)`] . Data on the latest generic ballot polls was retrieved from FiveThirtyEight (2022) on November 5. The polls are weighted based on recency in the same way as described above.
+
+Lastly, I obtain a set of 5,000 potential Democratic popular vote share by drawing a sample of size 5,000 from a normal distribution whose mean is the predicted Democratic vote share and whose standard deviation is the RMSE of Model 1. Democrats are predicted to win the popular vote in only `r sum(model_national_1_pred_w_error > 50)` of the 5,000 simulations (Figure 3).
+
+```{r plot predicted dem popular vote share, echo = FALSE}
+ggplot(mapping = aes(model_national_1_pred_w_error)) +
+  geom_histogram(binwidth = 0.5, boundary = 50) +
+  geom_vline(aes(xintercept = model_national_1_pred[1]), color = "blue") +
+  geom_vline(aes(xintercept = 50), color = "purple", linetype = "dashed") +
+  annotate(geom = "text",
+           x =  model_national_1_pred[1]-1.0, y = 700, label = "Predicted", color = "blue") +
+  labs(title = "Figure 3: Predicted Democratic Popular Vote Share (5,000 Simulations)",
+        x = "Two-Party Democratic Popular Vote Share", y = "Frequency") +
+  theme_light()
+```
+
+
+
+## Step 2: Predict the District-Level Democratic Performance Relative to the Popular Vote Share
+
+Next, I predict the district-level Democratic vote share relative to the Democratic popular vote share. The dependent variable is the ratio between the Democratic vote share in a district and the Democratic popular vote share. For this step, I build two models: one for districts where polling data is not available (Model 2a) and another for districts where polling data is available (Model 2b).
+
+### Model 2a: Without Polls
+
+My model for districts where polling data is not available is:
+
+![](model_spec_2a.png)
+
+This model is based on the district-level outcomes in the 2014 and 2018 midterm elections. The independent variables are the following:
+
+* **Democratic Presidential Candidate’s Vote Share in the Most Recent Presidential Election**: This variable is included based on the assumption that Clinton’s vote share in the 2016 Presidential election in a certain district is correlated with the Democrat’s vote share in 2018 in that district and that Obama’s 2012 district-level vote share is correlated with the Democrat’s district-level vote share in 2014. Data was retried from the Daily Kos (Nir, 2020).
+* **Expert Rating**: I take the average of the ratings of the Cook Political Report, Inside Elections, and Sabato’s Crystal Ball. The ratings were converted in to a 7-point scale, with  7 being “Solid/Safe Republican,” 4 being “Toss-up”, and 1 being “Solid/Safe Democrat.” If data on ratings was unavailable, I assumed that the actual outcome was what the experts had expected before the election. (i.e. 7 if a Republican won and 1 if a Democrat won.) This is a valid assumption because the districts where ratings are not available are safe seats.
+* **Incumbent**: I assume that compared to a Democratic challenger, a Democratic incumbent is more likely to perform better relative to the Democratic popular vote share.
+* I excluded did not incorporate data on ads because as shown in [Blog Posts 05](https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/05-air-war/) and [06](https://kentoyamada100.github.io/election-analytics-2022-midterms/posts/06-ground-game/), ads seem to have a weak or statistically insignificant impact on district-level outcomes.
+
+
+
+### Model 2b: With Polls
+
+My model for districts where polling data is available is:
+
+![](model_spec_2b.png)
+
+The independent variables are the following:
+
+* **Democratic candidate’s lead in polls**: I calculate the Democratic candidate’s lead in the polls and for each district, I take the weighted average based on the recency of the poll. The weights for recency are the same as the weights I used in Model 1.
+*	**Democratic Presidential Candidate’s Vote Share in Most Recent Presidential Election**
+*	**Democratic Incumbent**
+
+```{r Democratic popular vote share 2012-2020, include = FALSE}
+pop_share_df <- share_df %>%
+  filter(year >= 2012, year <= 2020) %>%
+  select(year, D_majorvote_pct) %>%
+  rename(d_pop_share = D_majorvote_pct)
+```
+
+```{r clinton vote share 2016, echo = FALSE}
+clinton_df <- pres_vote_share_2016 %>%
+  select(CD, Clinton, Trump) %>%
+  # Convert to two-party vote share
+  mutate(Clinton_two_party = 100*Clinton/(Clinton + Trump)) %>%
+  rename(District = CD, prev_pres_d = Clinton_two_party)
+
+# Change district names
+clinton_df$District[which(clinton_df$District == "AK-AL")] <- "AK-01"
+clinton_df$District[which(clinton_df$District == "DE-AL")] <- "DE-01"
+clinton_df$District[which(clinton_df$District == "MT-AL")] <- "MT-01"
+clinton_df$District[which(clinton_df$District == "ND-AL")] <- "ND-01"
+clinton_df$District[which(clinton_df$District == "SD-AL")] <- "SD-01"
+clinton_df$District[which(clinton_df$District == "VT-AL")] <- "VT-01"
+clinton_df$District[which(clinton_df$District == "WY-AL")] <- "WY-01"
+
+# Define year
+clinton_df$year <- 2018
+```
+
+```{r obama vote share 2012, echo = FALSE}
+obama_df <- pres_vote_share_2012 %>%
+  select(CD, `Obama 2012`, `Romney 2012`) %>%
+  # Convert to two-party vote share
+  mutate(Obama_two_party = 100*`Obama 2012`/(`Obama 2012` + `Romney 2012`)) %>%
+  rename(District = CD, prev_pres_d = Obama_two_party)
+
+# Change district names
+obama_df$District[which(obama_df$District == "AK-AL")] <- "AK-01"
+obama_df$District[which(obama_df$District == "DE-AL")] <- "DE-01"
+obama_df$District[which(obama_df$District == "MT-AL")] <- "MT-01"
+obama_df$District[which(obama_df$District == "ND-AL")] <- "ND-01"
+obama_df$District[which(obama_df$District == "SD-AL")] <- "SD-01"
+obama_df$District[which(obama_df$District == "VT-AL")] <- "VT-01"
+obama_df$District[which(obama_df$District == "WY-AL")] <- "WY-01"
+
+# Define year
+obama_df$year <- 2014
+```
+
+```{r clean incumbency data, include = FALSE}
+# Filter out 2012-2020
+incumb_df <-  filter(incumb, year >= 2012 & year <= 2020)
+
+# Find duplicates: summary(as.factor(incumb_df$district_id))
+# Remove other duplicates caused by runoffs etc.
+drop_2 <- c(
+  which(incumb_df$district_id == "LA05" & incumb_df$year == 2020)[2],
+  which(incumb_df$district_id == "LA03" & incumb_df$year == 2016)[2],
+  which(incumb_df$district_id == "LA03" & incumb_df$year == 2012)[2],
+  which(incumb_df$district_id == "LA04" & incumb_df$year == 2016)[1],
+  which(incumb_df$district_id == "LA05" & incumb_df$year == 2014)[2],
+  which(incumb_df$district_id == "ME02" & incumb_df$year == 2018)[2]
+)
+incumb_df <- incumb_df[-drop_2,]
+
+# Code incumbent = 1
+incumb_df <- incumb_df %>%
+  mutate(d_inc = case_when(DemStatus == "Incumbent" ~ 1, 
+                           TRUE ~ 0)) %>%
+  rename(District = district_id) %>%
+  select(year, District, d_inc)
+  
+# Format district names
+stri_sub(incumb_df$District, 3, 2) <- "-"
+
+# Change district names
+incumb_df$District[which(incumb_df$District == "AK-00")] <- "AK-01"
+incumb_df$District[which(incumb_df$District == "DE-00")] <- "DE-01"
+incumb_df$District[which(incumb_df$District == "MT-00")] <- "MT-01"
+incumb_df$District[which(incumb_df$District == "ND-00")] <- "ND-01"
+incumb_df$District[which(incumb_df$District == "SD-00")] <- "SD-01"
+incumb_df$District[which(incumb_df$District == "VT-00")] <- "VT-01"
+incumb_df$District[which(incumb_df$District == "WY-00")] <- "WY-01"
+```
+
+```{r vote share data, include = FALSE}
+vote_share_df <- vote_share %>%
+  # Filter out data from 2012 to 2020
+  filter(raceYear >= 2012, raceYear <= 2020) %>%
+  rename(pct_D = DemVotesMajorPercent, District = CD, year = raceYear) # Rename columns
+
+# Find duplicates: summary(as.factor(vote_share_df$district_id))
+# Remove other duplicates caused by runoffs etc.
+drop_3 <- c(
+  which(vote_share_df$district_id == "LA03" & vote_share_df$year == 2016)[2],
+  which(vote_share_df$district_id == "LA03" & vote_share_df$year == 2012)[2],
+  which(vote_share_df$district_id == "LA05" & vote_share_df$year == 2020)[2],
+  which(vote_share_df$district_id == "LA05" & vote_share_df$year == 2014)[2],
+  which(vote_share_df$district_id == "LA04" & vote_share_df$year == 2016)[1],
+  which(vote_share_df$district_id == "ME02" & vote_share_df$year == 2018)[2]
+)
+vote_share_df <- vote_share_df[-drop_3,]
+
+# Select relevant columns
+vote_share_df <- vote_share_df %>% 
+  select(year, District, pct_D)
+
+# Change district names
+vote_share_df$District[which(vote_share_df$District == "AK-AL")] <- "AK-01"
+vote_share_df$District[which(vote_share_df$District == "DE-AL")] <- "DE-01"
+vote_share_df$District[which(vote_share_df$District == "MT-AL")] <- "MT-01"
+vote_share_df$District[which(vote_share_df$District == "ND-AL")] <- "ND-01"
+vote_share_df$District[which(vote_share_df$District == "SD-AL")] <- "SD-01"
+vote_share_df$District[which(vote_share_df$District == "VT-AL")] <- "VT-01"
+vote_share_df$District[which(vote_share_df$District == "WY-AL")] <- "WY-01"
+```
+
+
+```{r clean expert ratings data, include = FALSE}
+ratings_df <- ratings %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # District numbers
+  mutate(District = str_pad(district, 2, pad = "0")) %>%
+  # Define district names
+  mutate(District = paste(State, District, sep = "-")) %>%
+  
+  # Filter out data from 2012 to 2020
+  filter(year >= 2012, year <= 2020) %>%
+  
+  select(District, year, cook, rothenberg, sabatos_crystal_ball)
+
+# Calculate ratings average
+ratings_df$rating_avg = rowMeans(ratings_df[, -c(1,2)])
+
+# Change district names
+ratings_df$District[which(ratings_df$District == "AK-AL")] <- "AK-01"
+ratings_df$District[which(ratings_df$District == "MT-AL")] <- "MT-01"
+ratings_df$District[which(ratings_df$District == "ND-AL")] <- "ND-01"
+ratings_df$District[which(ratings_df$District == "SD-AL")] <- "SD-01"
+```
+
+```{r outcome by CD, include = FALSE}
+d_win_df <- vote_share %>%
+  # Filter out data from 2012 to 2020
+  filter(raceYear >= 2012, raceYear <= 2020) %>%
+  rename(year = raceYear, District = CD) %>% # Rename columns
+  select(State, district_num, year, WinnerParty, District) %>%
+  # 1 if Democrat won
+  mutate(d_win = if_else(WinnerParty == "D", 1, 0))
+
+# Find duplicates: summary(as.factor(d_win_df$District))
+# Remove other duplicates caused by runoffs etc.
+drop <- c(
+  which(d_win_df$District == "LA-05" & d_win_df$year == 2020)[2],
+  which(d_win_df$District == "LA-03" & d_win_df$year == 2016)[2],
+  which(d_win_df$District == "LA-03" & d_win_df$year == 2012)[2],
+  which(d_win_df$District == "LA-04" & d_win_df$year == 2016 & 
+          d_win_df$WinnerParty == "D"),
+  which(d_win_df$District == "LA-05" & d_win_df$year == 2014 & 
+          d_win_df$WinnerParty == "D"),
+  which(d_win_df$District == "ME-02" & d_win_df$year == 2018 & 
+          d_win_df$WinnerParty == "R") # Ranked choice voting in ME
+)
+d_win_df <- d_win_df[-drop,]
+
+# Change district names
+d_win_df$District[which(d_win_df$District == "AK-AL")] <- "AK-01"
+d_win_df$District[which(d_win_df$District == "DE-AL")] <- "DE-01"
+d_win_df$District[which(d_win_df$District == "MT-AL")] <- "MT-01"
+d_win_df$District[which(d_win_df$District == "ND-AL")] <- "ND-01"
+d_win_df$District[which(d_win_df$District == "SD-AL")] <- "SD-01"
+d_win_df$District[which(d_win_df$District == "VT-AL")] <- "VT-01"
+d_win_df$District[which(d_win_df$District == "WY-AL")] <- "WY-01"
+
+# Select relevant columns
+d_win_df <- select(d_win_df, -c(State, district_num, WinnerParty))
+```
+
+```{r further clean expert ratings data, include = FALSE}
+# First merge d_win_df and ratings_df
+ratings_adj_df <- left_join(d_win_df, ratings_df, by = c("District", "year"))
+
+# If rating was missing for a particular district, that means that the race was not close
+# Assume that the rating was 7 if the Republicans ended up winning and 1 if the Democrats ended up winning
+ratings_adj_df[is.na(ratings_adj_df$rating_avg),]$rating_avg <- 
+  if_else(ratings_adj_df[is.na(ratings_adj_df$rating_avg),]$d_win == 0, 7, 1)
+
+# Select relevant columns
+ratings_adj_df <- ratings_adj_df %>% select(year, District, rating_avg)
+```
+
+```{r clean polls data, include = FALSE}
+district_polls_df <- district_polls %>%
+  # Discard special elections etc.
+  filter(election_date %in% c("11/8/22", "11/3/20", "11/6/18")) %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # Define district names
+  mutate(District = paste(State, cd_fips, sep = "-")) %>%
+  
+  # Calculate days until election
+  mutate(end_date = as.Date(end_date, "%m/%d/%y")) %>%
+  mutate(days_until_election = 
+           case_when(year == 2022 ~ round(difftime("2022-11-8", end_date, units = "days")),
+                     year == 2020 ~ round(difftime("2020-11-3", end_date, units = "days")),
+                     year == 2018 ~ round(difftime("2018-11-6", end_date, units = "days"))
+                     )) %>%
+  
+  # Discard polls conducted before election year
+   mutate(election_year =
+           case_when(year == 2022  & end_date > "2022-1-1" ~ 1,
+                     year == 2020  & end_date > "2020-1-1" ~ 1,
+                     year == 2018  & end_date > "2018-1-1" ~ 1,
+                     TRUE ~ 0
+                     )) %>%
+  filter(election_year == 1) %>%
+  
+  # Convert to numeric
+  mutate(dem_poll = as.numeric(DEM), rep_poll = as.numeric(REP)) %>%
+  # Discard rows with NA values
+  drop_na(dem_poll, rep_poll) %>%
+  # Calculate lead
+  mutate(dem_lead = dem_poll - rep_poll) %>%
+  # add weights
+  mutate(recency = 365 - as.numeric(days_until_election))
+
+district_polls_df <- district_polls_df %>%
+  # calculate weighted average
+  group_by(year, District) %>%
+  summarize(dem_lead_weighted = weighted.mean(dem_lead, recency)) %>%
+  select(year, District, dem_lead_weighted)
+```
+
+```{r join data sets, include = FALSE}
+# 2018 District-level data
+df_district_2018 <- 
+  full_join(vote_share_df, ratings_adj_df, by = c("year", "District")) %>%
+  filter(year == 2018) %>%
+  left_join(incumb_df, by = c("year", "District")) %>%
+  left_join(district_polls_df, by = c("year", "District")) %>%
+  left_join(clinton_df)
+
+# 2014 District-level data
+df_district_2014 <- 
+  full_join(vote_share_df, ratings_adj_df, by = c("year", "District")) %>%
+  filter(year == 2014) %>%
+  left_join(incumb_df, by = c("year", "District")) %>%
+  left_join(district_polls_df, by = c("year", "District")) %>%
+  left_join(obama_df)
+
+# Combine those two dataframes
+df_district <- bind_rows(df_district_2018, df_district_2014)
+
+# Democratic popular vote share in each year
+df_district <- df_district %>%
+  mutate(d_pop_share =
+         case_when(
+            year == 2014 ~ pop_share_df$d_pop_share[pop_share_df$year == 2014],
+            year == 2018 ~ pop_share_df$d_pop_share[pop_share_df$year == 2018]
+            ))
+
+# Democratic vote share in each district relative to Democratic popular vote share
+df_district <- df_district %>% 
+  mutate(pct_D_rel = pct_D/d_pop_share) 
+```
+
+```{r df_polls_not_available, include = FALSE}
+# Polling not available
+df_polls_not_available <- df_district %>% filter((is.na(dem_lead_weighted) == TRUE))
+```
+
+```{r df_polls_available, include = FALSE}
+# Polling available
+df_polls_available <- df_district %>% drop_na(dem_lead_weighted)
+```
+
+```{r model_district_1, include = FALSE}
+model_district_1 <- 
+  lm(pct_D_rel ~ 
+       prev_pres_d + rating_avg + d_inc,
+       data = df_district)
+```
+
+```{r model_district_2, include = FALSE}
+model_district_2 <- 
+  lm(pct_D_rel ~  
+       dem_lead_weighted + # Polls
+       prev_pres_d + d_inc,
+       data = df_polls_available)
+```
+
+```{r regression output 2, include = FALSE}
+stargazer(model_district_1, model_district_2,
+          type = 'html',
+          title = "Table 2: Democrat's Performance in Each District Relative to Nation-Level Vote Share",
+          column.labels = c("Model 2a: Without Polls", "Model 2b: With Polls"),
+          dep.var.labels   = "District-Level Dem Vote Share/National-Level Dem Vote Share",
+          covariate.labels = c("Democrat's Lead in Polls", 
+                               "Dem Vote in Previous Presidential Election", 
+                               "Rating Average",
+                               "Democratic Incumbent"),
+          model.numbers = FALSE) %>%
+  save_kable(file = "static/posts/08-final/table2.png",
+             zoom = 2.5)
+```
+
+![](table2.png)
+
+For both Model 2a and 2b, all the variables seem to be significant predictors. The magnitudes of the coefficients are hard to interpret because the dependent variable is a ratio measuring the district-level Democratic performance relative to the popular vote share. Note that the negative coefficient on expert ratings makes sense because a larger value of the exert ratings means that the Republican candidate was favored to win.
+
+#### Model Validation
+##### In-Sample Model Fit
+
+```{r calculate rmse for model_district_1, include = FALSE}
+rmse_model_district_1 <- (model_district_1$model$pct_D_rel - 
+                            model_district_1$fitted.values)^2 %>%
+  mean() %>% sqrt()
+```
+
+```{r calculate rmse for model_district_2, include = FALSE}
+rmse_model_district_2 <- (model_district_2$model$pct_D_rel - 
+                            model_district_2$fitted.values)^2 %>%
+  mean() %>% sqrt()
+```
+
+The adjusted R-squared is `r round(summary(model_district_1)$adj.r.squared, 3)` for Model 2a and `r round(summary(model_district_2)$adj.r.squared, 3)` for Model 2b. As seen in Figures 4 and 5, the in-sample errors are centered around 0 for both Models 2a and 2b, but the range of the in-sample-errors is larger for Model 2a. This makes sense because Model 2b incorporates polling data while Model 2a does not, which should make Model 2b more accurate. The in-sample RMSE for Model 2a is `r round(rmse_model_district_1, 2)` and the in-sample RMSE for Model 2b is `r round(rmse_model_district_2, 2)`.
+
+```{r in-sample fit model_district_1, echo = FALSE}
+hist(model_district_1$model$pct_D_rel - model_district_1$fitted.values,
+     breaks = 20,
+     xlim = c(-1,1),
+     xlab = NULL,
+     main = "Figure 4: True - Predicted Dem Vote Share/Dem Popular Vote Share (Model 2a)",
+     cex.main = 0.8,
+     cex.axis = 0.8)
+```
+
+```{r in-sample fit model_district_2, echo = FALSE}
+hist(model_district_2$model$pct_D_rel - model_district_2$fitted.values,
+     breaks = 10,
+     xlab = NULL,
+     xlim = c(-0.5,0.5),
+     main = "Figure 5: True - Predicted Dem Vote Share/Dem Popular Vote Share (Model 2b)",
+     cex.main = 0.8,
+     cex.axis = 0.8)
+```
+
+
+##### Out-Of-Sample Testing
+
+For Model 2a, I conduct 1000 runs of cross-validation by randomly withholding 100 observations in each iteration, fitting the model on the rest, and evaluating how well the model predicts the held-out observations. I do the same for Model 2b except I withhold 30 observations in each iteration. Figure 6 and 7 show the distribution of the out-of-sample RMSE. Not surprisingly, the size of the out-of-sample RMSE tends to be larger for Model 2a. The distribution is somewhat left-skewed for Model 2b.
+
+```{r cross-validation model_district_1, include = FALSE}
+set.seed(2022)
+cv_model_district_1_error <- 
+  sapply(1:1000, function(i){
+    # Randomly hold out 100 observations
+    obs_outsamp <- sample(nrow(df_district), 100) 
+    
+    # Linear regression based on the remaining observations
+    outsamp_mod <- lm(pct_D_rel ~ prev_pres_d + rating_avg + d_inc, 
+                    df_district[-obs_outsamp,])
+    
+    # Make predictions based on the model
+    outsamp_pred <- 
+      predict(outsamp_mod,
+              df_district[-obs_outsamp,])
+    
+    # True values
+    outsamp_true <- df_district[-obs_outsamp,]$pct_D_rel
+    
+    sqrt(mean((outsamp_pred - outsamp_true)^2))
+})
+```
+
+```{r plot cross-validation model_district_1, echo = FALSE}
+ggplot(mapping = aes(cv_model_district_1_error)) +
+  geom_histogram(bins = 20, boundary = 0) +
+  labs(title = "Figure 6: Out-of-Sample RMSE (Model 2a)",
+       subtitle = "1000 Runs of Cross Validation",
+       x = NULL, y = "Frequency") +
+  theme_light()
+```
+
+```{r cross-validation model_district_2, include = FALSE}
+set.seed(2022)
+cv_model_district_2_error <- 
+  sapply(1:1000, function(i){
+    # Randomly hold out 30 observations
+    obs_outsamp <- sample(nrow(df_polls_available), 30) 
+    
+    # Linear regression based on the remaining observations
+    outsamp_mod <- lm(pct_D_rel ~ dem_lead_weighted + prev_pres_d + d_inc, 
+                    df_polls_available[-obs_outsamp,])
+    
+    # Make predictions based on the model
+    outsamp_pred <- 
+      predict(outsamp_mod,
+              df_polls_available[-obs_outsamp,])
+    
+    # True values
+    outsamp_true <- df_polls_available[-obs_outsamp,]$pct_D_rel
+    
+    sqrt(mean((outsamp_pred - outsamp_true)^2))
+})
+```
+
+```{r plot cross-validation model_national_2, echo = FALSE}
+ggplot(mapping = aes(cv_model_district_2_error)) +
+  geom_histogram(bins = 20, boundary = 0) +
+  labs(title = "Figure 7: Out-Of-Sample RMSE (Model 2b)",
+       subtitle = "1000 Runs of Cross Validation",
+       x = NULL, y = "Frequency") +
+  theme_light()
+```
+
+## District-Level Prediction for 2022
+
+To predict the district-level outcomes, first, I use Models 2a and 2b to predict the extent to which the Democratic candidate in each district is predicted to overperform/underperform relative to the nation-level Democratic vote share. Data on expert ratings is based on Ballotpedia (2022) as well as the data provided in class. Data on Joe Biden’s vote share in each post-redistricting district was retried from Dave’s Redistricting (2022). Next, I obtain a set of 5,000 potential Democratic vote shares in each district by multiplying the predicted ratio in each district by the 5,000 potential Democratic popular vote shares obtained in Step 1. In doing so, I add a disturbance that is randomly drawn from a normal distribution whose mean is 0 and whose standard deviation is the in-sample RMSE of Model 2a and Model 2b in order to take into account the uncertainty in Step 2 of my model.
+
+```{r clean 2022 expert ratings data, include = FALSE}
+ratings_2022_df <- ratings_2022 %>%
+  mutate(Cook = case_when(
+    Cook == "Solid Democratic" ~ 1,
+    Cook == "Likely Democratic" ~ 2,
+    Cook == "Lean Democratic" ~ 3,
+    Cook == "Toss-up" ~ 4,
+    Cook == "Lean Republican" ~ 5,
+    Cook == "Likely Republican" ~ 6,
+    Cook == "Solid Republican" ~ 7
+  )) %>%
+  mutate(Inside = case_when(
+    Inside == "Solid Democratic" ~ 1,
+    Inside == "Likely Democratic" ~ 1.75,
+    Inside == "Lean Democratic" ~ 2.5,
+    Inside == "Tilt Democratic" ~ 3.25,
+    Inside == "Toss-up" ~ 4,
+    Inside == "Tilt Republican" ~ 4.75,
+    Inside == "Lean Republican" ~ 5.5,
+    Inside == "Likely Republican" ~ 6.25,
+    Inside == "Solid Republican" ~ 7
+  )) %>%
+  mutate(Sabato = case_when(
+    Sabato == "Safe Democratic" ~ 1,
+    Sabato == "Likely Democratic" ~ 2,
+    Sabato == "Lean Democratic" ~ 3,
+    Sabato == "Toss-up" ~ 4,
+    Sabato == "Lean Republican" ~ 5,
+    Sabato == "Likely Republican" ~ 6,
+    Sabato == "Safe Republican" ~ 7
+  ))
+
+# Calculate ratings average
+ratings_2022_df$rating_avg = rowMeans(ratings_2022_df[, -1])
+ratings_2022_df <- ratings_2022_df %>%
+  select(District, rating_avg)
+```
+
+
+```{r update expert ratings data 1, include = FALSE}
+ratings_latest_df <- ratings_2022_10_27 %>%
+  # District numbers
+  mutate(district = str_pad(district, 2, pad = "0")) %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # Define district names
+  mutate(District = paste(State, district, sep = "-")) %>%
+  select(District, cook, rothenberg, sabatos_crystal_ball)
+
+# Change district names
+ratings_latest_df$District[which(ratings_latest_df$District == "AK-AL")] <- "AK-01"
+
+# Calculate ratings average
+ratings_latest_df$rating_avg = rowMeans(ratings_latest_df[, -1])
+ratings_latest_df <- ratings_latest_df %>%
+  select(District, rating_avg)
+```
+
+```{r update expert ratings data 2, include = FALSE}
+rating_2022_df_updated <- 
+  bind_rows(
+    # Retain old data if new data is not available
+    anti_join(ratings_2022_df, ratings_latest_df, by = "District"),
+    # Update if new data is available
+    ratings_latest_df
+  )
+```
+
+```{r clean incumbency data 2022, include = FALSE}
+incumb_2022_df <- incumb_2022 %>%
+  # Convert state name to state abbreviation
+  mutate(State = state2abbr(state)) %>%
+  # District numbers
+  mutate(District = str_pad(district, 2, pad = "0")) %>%
+  # Define district names
+  mutate(District = paste(State, District, sep = "-"))
+
+# Change district names
+incumb_2022_df$District[which(incumb_2022_df$District == "AK-AL")] <- "AK-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "DE-AL")] <- "DE-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "WY-AL")] <- "WY-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "VT-AL")] <- "VT-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "ND-AL")] <- "SD-01"
+incumb_2022_df$District[which(incumb_2022_df$District == "SD-AL")] <- "SD-01"
+
+# Democratic incumbent running for re-election
+incumb_2022_df <- incumb_2022_df %>%
+  mutate(d_inc = case_when(cand_party == "Democratic" & incumbent == 1 ~ 1, 
+                           TRUE ~ 0)) %>%
+  filter(d_inc == 1) %>%
+  # Select relevant columns
+  select(District, d_inc) 
+```
+
+```{r polls data 2022, include = FALSE}
+district_polls_df_2022 <- district_polls_df %>% filter(year == 2022) 
+```
+
+```{r 2020 Biden performance, include = FALSE}
+biden_df <- pres_vote_share_2020 %>%
+  mutate(prev_pres_d = 100*Dem_2020_Pres/(Dem_2020_Pres + Rep_2020_Pres)) %>%
+  select(District, prev_pres_d)
+```
+
+```{r merge 2022 data, include = FALSE}
+df_2022 <- rating_2022_df_updated %>%
+  full_join(incumb_2022_df, by = "District") %>%
+  full_join(biden_df, by = "District") %>%
+  left_join(district_polls_df_2022, by = "District")
+
+# d_inc = 0 if no Democratic incumbent
+df_2022$d_inc[is.na(df_2022$d_inc)] <- 0
+
+# Poll available
+df_2022_poll <- df_2022 %>% drop_na(dem_lead_weighted)
+# No poll
+df_2022_no_poll <- setdiff(df_2022, df_2022_poll) 
+```
+
+```{r district-level prediction based on model_district_1, include = FALSE}
+df_2022_no_poll_predict <- df_2022_no_poll
+# Democrat's predicted performance relative to national popular vote share
+df_2022_no_poll_predict <- 
+  bind_cols(df_2022_no_poll_predict["District"],
+            predict(model_district_1, df_2022_no_poll_predict, interval = "prediction"))
+```
+
+```{r district-level prediction based on model_district_2, include = FALSE}
+df_2022_poll_predict <- df_2022_poll
+# Democrat's predicted performance relative to national popular vote share
+df_2022_poll_predict <- 
+  bind_cols(df_2022_poll_predict["District"],
+            predict(model_district_2, df_2022_poll_predict, interval = "prediction"))
+```
+
+
+```{r model_district_1 prediction, include = FALSE}
+d_vote_share_predict_no_poll <- 
+  matrix(NA, nrow = nrow(df_2022_no_poll_predict), ncol = nsims)
+
+# Democrat's predicted performance relative to national popular vote share
+for(i in 1:nrow(df_2022_no_poll_predict)){
+  for(j in 1:nsims){
+      d_vote_share_predict_no_poll[i, j] <-
+        # Predicted values
+        (df_2022_no_poll_predict$fit[i] +
+        # Add a normally distributed disturbance
+        rnorm(n = 1, mean = 0, sd = rmse_model_district_1))*
+        # Outcome of simulations (national popular vote)
+        model_national_1_pred_w_error[j]
+  }
+}
+
+# Combine df's
+no_poll_predict <- 
+  bind_cols(select(df_2022_no_poll_predict, c("District", "fit", "lwr", "upr")),
+            as_tibble(d_vote_share_predict_no_poll))
+```
+
+
+```{r model_district_2 prediction, include = FALSE}
+d_vote_share_predict_poll <- 
+  matrix(NA, nrow = nrow(df_2022_poll_predict), ncol = nsims)
+
+# Democrat's predicted performance relative to national popular vote share
+for(i in 1:nrow(df_2022_poll_predict)){
+  for(j in 1:nsims){
+      d_vote_share_predict_poll[i, j] <-
+        # Predicted values
+        (df_2022_poll_predict$fit[i]+
+        # Add a normally distributed disturbance
+        rnorm(n = 1, mean = 0, sd = rmse_model_district_2))*
+        # Outcome of the simulations (national popular vote)
+        model_national_1_pred_w_error[j]
+  }
+}
+
+# Combine df's
+poll_predict <- 
+  bind_cols(select(df_2022_poll_predict, c("District", "fit", "lwr", "upr")),
+            as_tibble(d_vote_share_predict_poll))
+```
+
+```{r simulated outcomes, include = FALSE}
+# Combine prediction based on model_district_1 with prediction based on model model_district_2
+poll_no_poll <- bind_rows(no_poll_predict, poll_predict) %>%
+  select(-c("fit", "lwr", "upr"))
+
+poll_no_poll_count <- bind_rows(no_poll_predict, poll_predict) %>%
+  select(-c("District", "fit", "lwr", "upr"))
+
+dem_seats_simulation <- rep(NA, nsims)
+for(i in 1:nsims){
+  dem_seats_simulation[i] <-
+    # For each simulation, 
+    # count the number of races where Democrats are projected to win
+    sum(poll_no_poll_count[,i] >= 50) 
+}
+```
+
+Through these steps, I obtain a set of 5,000 simulated outcomes, and for each of the 5,000 simulations, I count the number of districts where Democrats are predicted to win (Figure 8). The median of the predicted number Democratic seats is `r median(dem_seats_simulation)`. Democrats are predicted to retain their majority in the House in `r sum(dem_seats_simulation >= 218)` out of the 5,000 simulations, meaning that they are likely to lose their majority in the House.
+
+
+```{r plot predicted dem seats, echo = FALSE}
+ggplot(mapping = aes(dem_seats_simulation)) +
+  geom_histogram(binwidth = 2, boundary = 180) +
+  geom_vline(aes(xintercept = median(dem_seats_simulation)), color = "blue") +
+  geom_vline(aes(xintercept = 218), color = "purple", linetype = "dashed") +
+  annotate(geom = "text",
+             x =  median(dem_seats_simulation)+5, y = 300, label = "Median", color = "blue") +
+  labs(title = "Figure 8: Predicted Number of Seats Won By Democrats (5,000 Simulations)",
+        x = "Predicted Number of Democratic Seats", y = "Frequency") +
+  theme_light()
+```
+
+
+### Competitive Districts
+
+```{r competitive districts, include = FALSE}
+competitive_pred <- poll_no_poll %>%
+  filter(District %in% 
+           c("KS-03", "AK-01", "PA-07", "NY-19", "VA-02", "RI-02", "TX-15", "MI-03",
+             "CA-22", "CA-27", "IL-17", "IA-03", "OR-05", "NM-02", "NY-18", "AZ-02",
+             "ME-02", "PA-08", "NV-03", "PA-17", "NY-03", "MD-06", "CA-13", "OR-06",
+             "TX-34", "NJ-07", "NY-22", "MN-02", "MI-07", "OH-09")
+         ) %>%
+  pivot_longer(cols = 2:5001, values_to = "pred") %>%
+  group_by(District) %>%
+  mutate(median_pct_D = mean(pred)) 
+```
+
+```{r ca-22, echo = FALSE}
+ca_22 <- competitive_pred %>%
+  filter(District == "CA-22")
+
+ggplot(data = ca_22) +
+  geom_histogram(aes(x = pred), binwidth = 1) +
+  # Blue line if median_pct_D >= 50
+  geom_vline(aes(xintercept = median_pct_D), color = "blue",
+             data = ca_22[ca_22$median_pct_D >= 50,]) +
+  # Red line if median_pct_D < 50
+  geom_vline(aes(xintercept = median_pct_D), color = "red",
+             data = ca_22[ca_22$median_pct_D < 50,]) +
+  annotate(geom = "text",
+           x =  ca_22$median_pct_D[1]-2.0, y = 700, 
+           label = paste0("Median: ", round(ca_22$median_pct_D[1], 2)), color = "black") +
+  labs(title = "Figure 9: Predicted Democratic Vote Share in CA-22",
+       subtitle = "5,000 Simulations",
+       x = "Democratic Two-Party Vote Share", y = "Frequency") +
+  theme_bw()
+```
+
+The advantage of my model is that I can obtain a set of potential district-level vote shares for each district, taking into account the uncertainty in both Model 1 and Model 2a/2b.
+In California’s 22nd Congressional District, the median of the predicted Democratic vote share is `r round(ca_22$median_pct_D[1], 2)` and Rudy Salas (D) is predicted to win in `r sum(ca_22$pred >= 50)` out of the 5000 simulations (Figure 7). This suggests that the race is a pure toss-up.
+
+
+```{r competitive districts plot, include = FALSE}
+comp_plot <- ggplot(data = competitive_pred) +
+  geom_histogram(aes(x = pred), binwidth = 1) +
+  # Blue line if median_pct_D >= 50
+  geom_vline(aes(xintercept = median_pct_D), color = "blue",
+             data = competitive_pred[competitive_pred$median_pct_D >= 50,]) +
+  # Red line if median_pct_D < 50
+  geom_vline(aes(xintercept = median_pct_D), color = "red",
+             data = competitive_pred[competitive_pred$median_pct_D < 50,]) +
+  facet_wrap(~District, ncol = 5) +
+  labs(title = "Figure 10: Predicted Democratic Vote Share in Competitive Districts",
+       subtitle = "5,000 Simulations",
+       x = "Democratic Two-Party Vote Share", y = NULL) +
+    theme(text = element_text(size = 10))
+```
+
+
+```{r vote share per category, include = FALSE}
+competitive_pred_by_district <- competitive_pred %>%
+  group_by(District) %>%
+  summarize(median_pct_D = round(median(pred), 2))
+# Specify where to plot on map
+competitive_pred_by_district$y <- rep(200, nrow(competitive_pred_by_district))
+```
+
+```{r Figure 3, echo = FALSE}
+comp_plot +
+  # Add labels
+  geom_text(data = competitive_pred_by_district,
+            mapping = aes(x = median_pct_D + 20, y = y, 
+                          label = median_pct_D), color = "black", size = 3) 
+```
+
+Figure 10 shows the distribution of the predicted Democratic vote shares in 30 competitive districts. The median of the predicted Democratic vote share is larger than 50 in `r sum(competitive_pred_by_district$median_pct_D >= 50)` out of the 30 districts, meaning that Republicans may be slightly favored to win in most of the competitive districts. However, in all 30 districts, a Democratic two-party vote share of 50 is well within the range of the simulated Democratic vote shares, which confirms that the 30 districts are all competitive races that could go either way. Note that the range of the distribution is wider for districts where polling data was not readily available (e.g., AK-01, AZ-02). This makes sense because Model 2a yields larger errors, meaning that the size of the randomly generated disturbance tends to be larger.
+
+### References
+
+Abramowitz, A. (2018). Will Democrats Catch a Wave? The Generic Ballot Model and the 2018 US House Elections. *PS: Political Science & Politics, 51*(S1), 4-6. doi:10.1017/S1049096518001567
+
+Achen, C. H. & Bartels, L. M. (2017). *Democracy for realists :why elections do not produce responsive government.* Princeton University Press.
+
+Bafumi, J., Erikson, R., & Wlezien, C. (2018). Forecasting the 2018 Midterm Election using National Polls and District Information. PS: Political Science & Politics, 51(S1), 7-11. doi:10.1017/S1049096518001579
+
+Ballotpedia. (2022). United States Congress elections, 2022. https://ballotpedia.org/United_States_Congress_elections,_2022
+
+Campbell, J. (2018). Introduction: Forecasting the 2018 US Midterm Elections. *PS: Political Science & Politics, 51*(S1), 1-3. doi:10.1017/S1049096518001592
+
+Dave's Redistricting. (2022). https://davesredistricting.org/maps#home
+
+FiveThirtyEight. (2022, November 5). Do Voters Want Republicans or Democrats in Congress? https://projects.fivethirtyeight.com/polls/generic-ballot/
+
+Gelman, A., & King, G. (1993). Why Are American Presidential Election Campaign Polls So Variable When Votes Are So Predictable? *British Journal of Political Science, 23*(4), 409–451. https://doi.org/10.1017/S0007123400006682
+
+Nir, D. (2020, November 19). Daily Kos Elections' presidential results by congressional district for 2020, 2016, and 2012. *Daily Kos.* https://www.dailykos.com/stories/2012/11/19/1163009/-Daily-Kos-Elections-presidential-results-by-congressional-district-for-the-2012-2008-elections
