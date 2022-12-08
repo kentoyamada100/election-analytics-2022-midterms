@@ -62,7 +62,7 @@ demographics_2022 <- read_excel("analysis_data/demographics_by_2022_cd.xlsx")
 ```
 
 
-In this blog post, I discuss how candidates campaigned in California’s 22nd District and explore whether the campaigns could explain why the actual outcome in CA-22 slightly deviated from the forecasts.
+In this blog post, I discuss how candidates campaigned in California’s 22nd District and explore whether the campaign could have helped David Valadao (R) perform better than expected.
 
 ## 1. Overview
 
@@ -172,8 +172,8 @@ biden_new_ca_22 <- pres_vote_share_2020 %>%
 
 
 
-## 2.Forcecasted Outcome vs Actual Outcome
-The predictions made by professional election forecasters as well as my model suggested that the race would be very close. Based on my model, the predicted Democratic two-party vote share was 49.78%, and 2700 out of the 5000 simulations predicted a Republican victory. The Cook Political Report, Inside Elections, and Sabato’s Crystall Ball all classified CA-22 as a toss-up. The race was so close that FiveThirtyEight and the Economist came to different conclusions on who was more likely to win. FiveThirtyEight predicted that the Democratic vote share would be 49.0% and it predicted that Valadao (R) has a 61% chance of winning the seat (“Valadao is slightly favored to…”, 2022). Meanwhile, the Economist predicted that the Democratic vote share would be 50.8% and it predicted that Salas (D) has a 60% chance of winning the seat (“In California, the Republicans are…”, 2022). 
+## 2. Forcecasted Outcome vs Actual Outcome
+The predictions made by professional election forecasters as well as my model suggested that the race would be very close. Based on my model, the predicted Democratic two-party vote share was 49.78%, and 2700 out of the 5000 simulations predicted a Republican victory. The Cook Political Report, Inside Elections, and Sabato’s Crystall Ball all classified CA-22 as a toss-up. The race was so close that FiveThirtyEight and the Economist came to different conclusions regarding who was more likely to win. FiveThirtyEight predicted that the Democratic vote share would be 49.0% and it predicted that Valadao (R) has a 61% chance of winning the seat (“Valadao is slightly favored to…”, 2022). Meanwhile, the Economist predicted that the Democratic vote share would be 50.8% and it predicted that Salas (D) has a 60% chance of winning the seat (“In California, the Republicans are…”, 2022). 
 
 Indeed, the race was extremely close. As of November 7, the Democratic vote share is at 48.48%. My model and FiveThirtyEight’s model correctly predicted Salas’ victory. Compared to the predicted outcomes, Valadao did slightly better than expected, given that the Democratic vote share predicted by FiveThirtyEight, the Economist, and myself all are higher than the actual outcome (The error was 0.5%, 1.3%, 2.3%, respectively). In Section 4, I speculate on whether the campaign could have led Valadao to perform slightly better than expected.
 
@@ -330,8 +330,7 @@ According to Vavreck (2009), as a candidate of the incumbent party running in th
 
 Salas did not identify a clear “insurgent issue” that he could campaign on. Portraying himself as a candidate who would protect democracy from pro-Trump extremist Republicans was not an option because Valadao was not a pro-Trump candidate. Salas could have highlighted abortion as an insurgent issue, but Figure 4 suggests that he did not.
 
-Similar to Figure 3, Figure 4 shows the frequency of two adjacent words that were used in the “Meet Rudy” page and the “Priorities” page of Salas’ website (Salas, 2022a; Salas, 2022b). Access to clean water, lowering the drug prices, and expanding access to healthcare seem to have been the top issues highlighted in his website. Indeed, in his answer to a questionnaire, he stated that his “top legislative priorities” would be to lower prescription drug costs and insurance premiums” (Fry, 2022). Women’s health is at the bottom of the list of priorities listed in Salas (2020b). Salas' decision not to highlight abortion may be understandable given the large presence of Latino Catholic voters in CA-22. Thus, unlike in other parts of the country, where the threat to democracy and access to abortion were “insurgent issues” that Democrats could campaign on, Salas did not have a clear “insurgent issue” that he could campaign on. 
-
+Similar to Figure 3, Figure 4 shows the frequency of two adjacent words that were used in the “Meet Rudy” page and the “Priorities” page of Salas’ website (Salas, 2022a; Salas, 2022b). Access to clean water, lowering drug prices, and expanding access to healthcare seem to have been the top issues highlighted in his website. Indeed, in his answer to a questionnaire, he stated that his top legislative priority would be to lower prescription drug costs and insurance premiums (Fry, 2022). Women’s health is at the bottom of the list of priorities listed in Salas (2020b). Salas' decision not to highlight abortion may be understandable given the large presence of Latino Catholic voters in CA-22. Thus, unlike in other parts of the country, where the threat to democracy and access to abortion were “insurgent issues” that Democrats could campaign on, Salas did not have a clear “insurgent issue” that he could campaign on.
 
 ```{r salas website, include = FALSE}
 salas_website <- readtext("analysis_data/campaign/salas/*.pdf")
