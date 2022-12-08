@@ -1,0 +1,434 @@
+---
+title: "10-Campaign Narrative"
+author: "Kento Yamada"
+date: '2022-12-07'
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE)
+knitr::opts_knit$set(root.dir = '/Users/kentoyamada/Documents/R-Projects/election-analytics-2022-midterms')
+```
+
+```{r load packages, include = FALSE}
+library(tidyverse)
+library(sf)
+library(rmapshaper)
+library(readxl)
+library(gt)
+library(quanteda)
+library(readtext)
+library(quanteda.textstats)
+library(quanteda.textplots)
+```
+
+```{r load data, include = FALSE}
+# My Prediction
+pred_dem_share <- read_csv("analysis_data/district_dem_share_pred.csv")
+# Data on vote/seat share
+share <- read_csv("analysis_data/house_popvote_seats.csv") %>%
+  select(-c("...1", "AreaAll")) # de-select unnecessary columns
+
+# Generic ballot
+generic <- read_csv("analysis_data/GenericPolls1942_2020_updated.csv")
+# 2022 generic ballot
+recent_generic <- read_csv("analysis_data/1105_538_generic_ballot_polls.csv")
+
+# Expert ratings
+ratings <- read_csv("analysis_data/expert_rating.csv")
+# Expert ratings data for 2022
+ratings_2022 <- read_excel("analysis_data/expert_ratings_2022.xlsx")
+# Latest expert ratings data
+ratings_2022_10_27 <- read_csv("analysis_data/expert_rating_2022-10-27.csv")
+
+# Vote share by district
+vote_share <- read_csv("analysis_data/house_party_vote_share_by_district_1948-2020.csv")
+
+# Vote share in Presidential elections
+pres_vote_share_2016 <- read_csv("analysis_data/kos_2016_pres_2018_districts.csv", skip = 1)
+pres_vote_share_2012 <- read_csv("analysis_data/kos_2012_pres_2014_districts.csv")
+pres_vote_share_2020 <-  read_csv("analysis_data/dra_2020_pres.csv") %>%
+  select(-"...1")
+
+# Incumbency
+incumb <- read_csv("analysis_data/incumb_dist_1948-2020.csv")
+incumb_2022 <- read_csv("analysis_data/house_cands.csv")
+
+# District-level polls
+district_polls <- read_csv("analysis_data/house_polls_long.csv")
+
+# Demographics
+demographics_2022 <- read_excel("analysis_data/demographics_by_2022_cd.xlsx")
+```
+
+
+In this blog post, I discuss how candidates campaigned in California’s 22nd District and explore whether the campaigns could explain why the actual outcome in CA-22 slightly deviated from the forecasts.
+
+## 1. Overview
+
+The district is a Latino-majority district located in the Central Valley. According to the 2020 Census, 59.9% of the voting age population is Hispanic. This is more than twice the size of the white voting age population, which is 27.4%. The remainder of the electorate is mostly black voters (7.0% of VAP) and Asian voters (4.2% of VAP) (Dave’s Redistricting, 2022). The typical voter is a working-class farmer (Knowles, 2022).
+
+The district was heavily impacted by the 2020 redistricting cycle. As seen in Figure 1, there is little overlap between the pre-redistricting CA-22 and the post-redistricting CA-22, and there is a significant overlap between the old CA-21 and the new CA-22. Prior to redistricting, CA-22 used to be a Republican-leaning district, as seen from the fact that Davin Nunes (R) won every single election between 2012 and 2020 (Table 1). However, due to redistricting, CA-22 became more competitive or slightly Democratic leaning. The Cook Partisan Voting Index changing from R+8 (The Cook Political Report, n.d.) to D+5 (The Cook Political Report, 2022). In the post-redistricting CA-22, Joe Biden won 56.6% of the two-party vote (Dave’s Redistricting, 2022).
+
+This can be explained by the fact that the old CA-21, much of which now belongs to CA-22, was a more competitive district than the old CA-22 (Table 1). David Valadao (R) narrowly won in 2020, but he narrowly lost to Cox T.J. (D) in 2018. In this election cycle, David Valadao (R) ran from CA-22. His challenger was Rudy Salas (D), a California State Assembly member. 
+
+```{r demographics, include = FALSE}
+demographics_2022 %>%
+  filter(District == "CA-22") %>%
+  mutate(white = White_2020_VAP/Total_2020_VAP,
+         hispanic = Hispanic_2020_VAP/Total_2020_VAP,
+         black = Black_2020_VAP/Total_2020_VAP,
+         asian = Asian_2020_VAP/Total_2020_VAP,
+         native = Native_2020_VAP/Total_2020_VAP,
+         pacific = Pacific_2020_VAP/Total_2020_VAP,) %>%
+  select(District, white, hispanic, black, asian, native, pacific)
+```
+
+```{r previous district, include = FALSE}
+old_dist_ca_relevant <- readRDS("analysis_data/districts114.rds") %>%
+  # Select columns, rename, and convert district number to numeric
+  select(STATENAME, DISTRICT) %>%
+  rename(district_num = DISTRICT, State = STATENAME) %>%
+  mutate(district_num = as.numeric(district_num)) %>%
+  filter(State == "California") %>%
+  filter(district_num %in% c(22, 21)) %>%
+  mutate(district = paste0("Old CA-", district_num)) %>%
+  # Simplify
+  ms_simplify(keep = 0.04)
+```
+
+```{r new district, include = FALSE}
+new_dist_ca_relevant<- 
+  st_read("analysis_data/cd2022_actual/2022\ U.S.\ House\ of\ Representatives\ Districts\ with\ Water\ Clipped\ to\ Shoreline.shp") %>%
+  filter(Code == "CA-22") %>%
+  mutate(district = paste0("New", Code)) %>%
+  # Simplify
+  ms_simplify(keep = 0.04)
+```
+
+```{r new and old CA-22, echo = FALSE, warning = FALSE, message = FALSE}
+ggplot() +
+  geom_sf(data = old_dist_ca_relevant, fill = "yellow") +
+  geom_sf_label(data = old_dist_ca_relevant, aes(label = district),
+                nudge_y = c(0.5, 0), nudge_x = c(-0.5, 0),
+                color = "gold4") +
+  geom_sf(data = new_dist_ca_relevant, fill = "purple", alpha = 0.6) +
+  geom_sf_label(data = new_dist_ca_relevant, aes(label = district),
+                color = "purple") +
+  
+  labs(title = "Figure 1: Old CA-21/CA-22 vs New CA-22",
+       caption = "Shapefile: Lewis et al (2020), Donner (2022)") +
+  
+  # Set theme
+  theme(axis.line = element_blank(), axis.text = element_blank(),
+        axis.ticks = element_blank(), axis.title = element_blank(),
+        panel.background = element_blank())
+```
+
+```{r incumbency ca21, include = FALSE}
+incumb_ca_21 <- incumb %>%
+  filter(district_id == "CA21", year >= 2012) %>%
+  select(year, district_id, DemCandidate, RepCandidate, DemVotesMajorPercent) %>%
+  rename(Year = year, District = district_id, Dem = DemCandidate, Rep = RepCandidate, DemShare = DemVotesMajorPercent) %>%
+  select(-District)
+```
+
+```{r incumbency ca22, include = FALSE}
+incumb_ca_22 <- incumb %>%
+  filter(district_id == "CA22", year >= 2012) %>%
+  select(year, district_id, DemCandidate, RepCandidate, DemVotesMajorPercent) %>%
+  rename(Year = year, District = district_id, Dem = DemCandidate, Rep = RepCandidate, DemShare = DemVotesMajorPercent) %>%
+  select(-c(Year, District))
+```
+
+```{r incumbency table, echo = FALSE, warning = FALSE, message = FALSE}
+bind_cols(incumb_ca_21, incumb_ca_22) %>%
+  gt() %>%
+  cols_label(
+    Dem...2 = "Dem",
+    Dem...5 = "Dem",
+    Rep...3 = "Rep",
+    Rep...6 = "Rep",
+    DemShare...4 = "DemShare",
+    DemShare...7 = "DemShare"
+  ) %>%
+  tab_spanner(
+    label = "CA-21",
+    columns = 2:4
+  ) %>% 
+  tab_spanner(
+    label = "CA-22",
+    columns = 5:7
+  ) %>%
+  tab_header(title = "Table 1: Incumbency and Vote Share: CA-21 and CA-22")
+```
+
+```{r 2020 Biden performance, include = FALSE}
+biden_new_ca_22 <- pres_vote_share_2020 %>%
+  mutate(prev_pres_d = 100*Dem_2020_Pres/(Dem_2020_Pres + Rep_2020_Pres)) %>%
+  filter(District == "CA-22") %>%
+  pull(prev_pres_d)
+```
+
+
+
+## 2.Forcecasted Outcome vs Actual Outcome
+The predictions made by professional election forecasters as well as my model suggested that the race would be very close. Based on my model, the predicted Democratic two-party vote share was 49.78%, and 2700 out of the 5000 simulations predicted a Republican victory. The Cook Political Report, Inside Elections, and Sabato’s Crystall Ball all classified CA-22 as a toss-up. The race was so close that FiveThirtyEight and the Economist came to different conclusions on who was more likely to win. FiveThirtyEight predicted that the Democratic vote share would be 49.0% and it predicted that Valadao (R) has a 61% chance of winning the seat (“Valadao is slightly favored to…”, 2022). Meanwhile, the Economist predicted that the Democratic vote share would be 50.8% and it predicted that Salas (D) has a 60% chance of winning the seat (“In California, the Republicans are…”, 2022). 
+
+Indeed, the race was extremely close. As of November 7, the Democratic vote share is at 48.48%. My model and FiveThirtyEight’s model correctly predicted Salas’ victory. Compared to the predicted outcomes, Valadao did slightly better than expected, given that the Democratic vote share predicted by FiveThirtyEight, the Economist, and myself all are higher than the actual outcome (The error was 0.5%, 1.3%, 2.3%, respectively). In Section 4, I speculate on whether the campaign could have led Valadao to perform slightly better than expected.
+
+```{r include = FALSE}
+ratings_2022_10_27 %>% 
+  filter(state == "California", district == "22") %>%
+  select(cook, rothenberg, sabatos_crystal_ball)
+```
+
+```{r ca-22 predicted vote share, include = FALSE}
+# My prediction
+pred_dem_share_ca_22 <- pred_dem_share %>%
+  filter(District == "CA-22") %>%
+  select(-c("...1", "District")) %>%
+  pivot_longer(cols = 1:5000) %>%
+  rename(pred = value) %>%
+  select(pred)
+
+# Point estimate
+my_pred_dem_share_ca_22 <- mean(pred_dem_share_ca_22$pred)
+
+# Economist prediction
+ec_pred_dem_share_ca_22 <- 50.8
+
+# 538 Prediction
+fte_pred_dem_share_ca_22 <- 49.0
+```
+
+```{r ca-22 actual, include = FALSE}
+ca_22_actual_dem_share <- 
+   100*49722/(49722 +52849)
+```
+
+```{r pred vs actual, echo = FALSE}
+ggplot() +
+  geom_histogram(data = pred_dem_share_ca_22, 
+                 mapping = aes(x = pred), binwidth = 1) +
+  # My prediction
+  geom_vline(aes(xintercept = my_pred_dem_share_ca_22), color = "purple") +
+  annotate(geom = "text",
+           x =  my_pred_dem_share_ca_22+2.6, y = 700, 
+           label = paste0("My Prediction: ", round(my_pred_dem_share_ca_22, 2)), 
+           color = "purple") +
+  
+  # 538 prediction
+  geom_vline(aes(xintercept = fte_pred_dem_share_ca_22), color = "red") +
+  annotate(geom = "text",
+           x =  fte_pred_dem_share_ca_22-2.5, y = 700, 
+           label = paste0("FiveThirtyEight: ", fte_pred_dem_share_ca_22), 
+           color = "red") +
+  
+  # Economist prediction
+  geom_vline(aes(xintercept = ec_pred_dem_share_ca_22), color = "blue") +
+  annotate(geom = "text",
+           x =  ec_pred_dem_share_ca_22+2, y = 740, 
+           label = paste0("Economist: ", ec_pred_dem_share_ca_22), 
+           color = "blue") +
+  
+  # Actual
+  geom_vline(xintercept = ca_22_actual_dem_share, color = "gold4") +
+  annotate(geom = "text",
+           x =  ca_22_actual_dem_share-2.0, y = 620, 
+           label = paste0("Actual: ", round(ca_22_actual_dem_share, 2)), color = "gold4") +
+  
+  labs(title = "Figure 2: Actual vs Predicted Democratic Vote Share in CA-22",
+       subtitle = "5,000 Simulations",
+       x = "Democratic Two-Party Vote Share", y = "Frequency",
+       caption = "Data updated on 11/7/22 ('California 22nd Congressional District Election Results', 2022)") +
+  theme_bw()
+```
+
+## 3. Summary of the Campaigns
+
+### Ads
+
+Because the race was highly competitive, both campaigns invested heavily in ads. According to the Wesleyan Media Project (2022), in the 2 months before the election, the race in CA-22 had more ad airings than any other House race. Between September 5 and October 30, there were 44,306 ad airings in CA-22, which is 1.8 times the number of ads aired in ME-02, which had the second most ad airings. 22,282 were pro-Democratic, and 22,024 were pro-Republican, which suggests that neither campaign had an advantage in terms of the number of ads. The race in CA-22 was one of the most expensive races in the country. The Democratic Congressional Campaign Committee spent over 4 million dollars while the National Republican Congressional Committee spent 6 million dollars (Fernandez, 2022).
+
+### Impeachment
+
+David Valadao was one of the 10 House Republicans who voted to impeach President Trump in the wake of the January 6 insurrection. During the primaries, Democrats attempted to prop up a pro-Trump candidate, Christ Mathys, in hopes that Mathys’ win in the primaries would make it easier for Salas to win the general election. The House Majority PAC spent approximately 200,000 dollars to air ads that promoted Chris Mathys, outspending  Mathys himself, who spent 80,000 dollars (Caldwell et al., 2022; Linskey, 2022; Marans, 2022). In the end, Valadao got 1,310 more votes than Mathyrs, and Valadao and Salas advanced to the general election (Ballotpedia, 2022).
+
+During the general election, pro-Democratic groups attempted to dissuade Republican voters from voting for Valadao by reminding voters of Valadao’s vote to impeach Trump. The Voter Protection Project, which campaigned against Valadao, spent hundreds of thousands of dollars against Valadao in a bid to portray Valadao as a “traitor” to Trump (Knowles, 2022).
+
+### Economy
+
+While Valadao’s impeachment vote was a key issue in the campaign, Valadao tried not to talk about his views on President Trump and instead focused on issues such as rising gas prices and access to water. When Former Vice President Mike Pence campaigned with Valadao, Pence avoided talking about President Trump. When Pence was asked about his views on Valadao’s decision to vote to impeach Trump, Pence avoided answering that question, noting that “elections are about the future.” He instead talked about rising gas prices (Knowles, 2022). This tactic is understandable because talking about Valadao’s impeachment vote could alienate Trump voters.
+
+There is anecdotal evidence that ads bought by pro-Republican groups attempted to make the issue of inflation more salient. An ad aired with the support of a Republican Super PAC Defending Main Street highlighted the issue of inflation by arguing that “the money we make buys less and less. Fuel for our cars. Food for our tables. It all costs more” (Vakil et al., 2020).
+
+### Abortion
+When the Dobbs decision was handed down, Democrats believed that the ruling would motivate Democratic voters to turn out to elect pro-choice candidates or to support pro-abortion ballot measures. Dobbs had the potential of impacting the race in CA-22 because the two candidates had extremely different views on abortion. Salas co-sponsored California’s Proposition 1, which sought to codify the right to abortion in the State Constitution. On the other hand, Valadao co-sponsored the Life at Conception Act, which seeks to significantly limit access to abortion, and signed a brief that asked the Supreme Court to end protections for abortion at the federal level (Mehta & Vega, 2022). While Democrats hoped that their base would turn out to vote for Salas because of the Dobbs ruling, the ruling could have also had the opposite effect. Because the majority of CA-22’s electorate is Latino and many of them are Catholic, some argue that the issue of abortion had the potential of motivating those Latino voters to turn out (Gannon, 2022). Indeed, during the campaigns, Republicans attempted to portray Salas as abortion extremist (White, 2022).
+
+## 4. Analysis
+In this section, I discuss how the campaigns could explain why Valadao did slightly better than expected. 
+
+### Candidate Quality
+
+Nominating an extremist in the primaries has a negative impact on the party’s electoral prospects (Hall, 2015). Despite the Democrats’ efforts to have a pro-Trump candidate advance to the general elections, Valadao advanced to the general elections. Valadao’s decision to distance himself from Trump made it easier for him to appeal to moderate voters. Since Biden won more votes than Trump in CA-22, fielding a moderate candidate in CA-22 was the right decision for the Republicans.
+
+### Valadao (R): “Clarifying Campaign”
+
+Vavreck (2009) argues that challengers running when the economy is bad should talk about the economy more than any other issue. In doing so, they can increase the salience of the bad economy and reduce uncertainty about their position on the economy. In addition to the anecdotal evidence presented in Section 3, here, I present some more analysis that Valadao campaigned on the economy.
+
+Figure 3 shows the frequency of two adjacent words that were used in the “Meet David” page and the “Issues” page of Valadao’s website (Valadao, 2022a; Valadao, 2022b). Economic issues, access to water, and immigration were the top issues that Valadao highlighted in his website. Interestingly, he reminded people of rising energy prices when he discussed his views on energy policies. He argued that “red tape and frivolous litigation is blocking the development of America’s energy resources, killing jobs and slamming families with sky-high energy costs” and that he was in favor of “expanding our domestic energy potential to reduce our dependence on foreign energy and save money here at home” (Valadao, 2022c). Through this statement, he not only highlighted his eagerness to promote the development of domestic energy sources and creating jobs, but also reminded people that their energy bills and gas prices had been rising. He was clearly attempting to increase the salience of the issue of rising prices.
+
+
+```{r valadao website, include = FALSE}
+valadao_website <- readtext("analysis_data/campaign/valadao/*pdf")
+valadao_cor <- corpus(valadao_website)
+```
+
+```{r valadao tokens, include = FALSE}
+valadao_tokens <- tokens(valadao_cor, 
+                    remove_punct = TRUE,
+                    remove_symbols = TRUE,
+                    remove_numbers = TRUE,
+                    remove_url = TRUE) %>% 
+  # Remove tokens
+  tokens_remove(pattern=c("rudy", "salas", "david", "valadao", "central", "valley")) %>%
+  tokens_tolower() %>%
+  tokens_remove(pattern = stopwords("en")) %>%
+  tokens_wordstem() %>%
+  tokens_select(min_nchar = 3) %>%
+  tokens_ngrams(n = 2)
+```
+
+```{r valadao dfm, include = FALSE}
+valadao_dfm <- dfm(valadao_tokens, tolower = TRUE)
+```
+
+```{r valadao frequency, echo = FALSE, out.height="200%"}
+options(repr.plot.width = 14, repr.plot.height = 8)
+valadao_dfm %>% 
+  # Frequency: 2+
+  textstat_frequency(n = sum(textstat_frequency(valadao_dfm)$frequency >= 2)) %>% 
+  ggplot(aes(x = reorder(feature, frequency), y = frequency)) +
+  geom_point() +
+  coord_flip() +
+  labs(x = NULL, y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Figure 3: Analysis of David Valadao's Website",
+       subtitle = "Frequency of Two Adjacent Words",
+       caption = "Excluding 'Rudy', 'Salas', 'David', 'Valadao', 'Central', 'Valley'") +
+  theme(plot.title = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        axis.title =  element_text(size = 8),
+        axis.text = element_text(size = 8),
+        plot.caption = element_text(size = 8))
+```
+
+### Salas (D): “Insurgent Campaign”
+
+According to Vavreck (2009), as a candidate of the incumbent party running in the midst of a bad economy, Salas should have run an “insurgent campaign.” Insurgent candidates should divert attention from the economy and talk about issues that they can benefit from. The policies that the insurgent campaign highlights should be policies that much of the public clearly supports and that the clarifying candidate does not or cannot support.
+
+Salas did not identify a clear “insurgent issue” that he could campaign on. Portraying himself as a candidate who would protect democracy from pro-Trump extremist Republicans was not an option because Valadao was not a pro-Trump candidate. Salas could have highlighted abortion as an insurgent issue, but Figure 4 suggests that he did not.
+
+Similar to Figure 3, Figure 4 shows the frequency of two adjacent words that were used in the “Meet Rudy” page and the “Priorities” page of Salas’ website (Salas, 2022a; Salas, 2022b). Access to clean water, lowering the drug prices, and expanding access to healthcare seem to have been the top issues highlighted in his website. Indeed, in his answer to a questionnaire, he stated that his “top legislative priorities” would be to lower prescription drug costs and insurance premiums” (Fry, 2022). Women’s health is at the bottom of the list of priorities listed in Salas (2020b). Salas' decision not to highlight abortion may be understandable given the large presence of Latino Catholic voters in CA-22. Thus, unlike in other parts of the country, where the threat to democracy and access to abortion were “insurgent issues” that Democrats could campaign on, Salas did not have a clear “insurgent issue” that he could campaign on. 
+
+
+```{r salas website, include = FALSE}
+salas_website <- readtext("analysis_data/campaign/salas/*.pdf")
+salas_cor <- corpus(salas_website)
+```
+
+```{r salas tokens, include = FALSE}
+salas_tokens <- tokens(salas_cor, 
+                    remove_punct = TRUE,
+                    remove_symbols = TRUE,
+                    remove_numbers = TRUE,
+                    remove_url = TRUE) %>% 
+  # Remove tokens
+  tokens_remove(pattern=c("rudy", "salas", "david", "valadao", "central", "valley")) %>%
+  tokens_tolower() %>%
+  tokens_remove(pattern = stopwords("en")) %>%
+  tokens_wordstem() %>%
+  tokens_select(min_nchar = 3) %>%
+  tokens_ngrams(n = 2)
+```
+
+```{r salas dfm, include = FALSE}
+salas_dfm <- dfm(salas_tokens, tolower = TRUE)
+```
+
+```{r salas frequency, echo = FALSE, out.height="200%"}
+salas_dfm %>% 
+  # Frequency: 2+
+  textstat_frequency(n = sum(textstat_frequency(salas_dfm)$frequency >= 2)) %>% 
+  ggplot(aes(x = reorder(feature, frequency), y = frequency)) +
+  geom_point() +
+  coord_flip() +
+  labs(x = NULL, y = "Frequency") +
+  theme_minimal() +
+  labs(title = "Figure 4: Analysis of Rudy Salas' Website",
+       subtitle = "Frequency of Two Adjacent Words",
+       caption = "Excluding 'Rudy', 'Salas', 'David', 'Valadao', 'Central', 'Valley'")+
+    theme(plot.title = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        axis.title =  element_text(size = 8),
+        axis.text = element_text(size = 8),
+        plot.caption = element_text(size = 8))
+```
+
+### References
+
+Ballotpedia. (2022). California's 22nd Congressional District. https://ballotpedia.org/California%27s_22nd_Congressional_District
+
+Caldwell, N., Shapiro, A., & Kenin, J. (2022, June 27). Democrats are bankrolling ads promoting fringe Republican candidates. Here's why. *NPR.* https://www.npr.org/2022/06/27/1106859552/primary-illinois-colorado-republican-candidate-democrats-ads
+
+California 22nd Congressional District Election Results. (2022, November 21). *New York Times.* https://www.nytimes.com/interactive/2022/11/08/us/elections/results-california-us-house-district-22.html
+
+Dave’s Redistricting. (2022). https://davesredistricting.org/maps#home
+
+Donner, D. (2022). Congressional District Hexmap version 3. *Daily Kos.* https://dkel.ec/map
+
+Fernandez, M. (2022, November 7). Where the money went this year. https://www.politico.com/newsletters/weekly-score/2022/11/07/where-the-money-went-this-year-00065372
+
+Fry, H. (2022, October 25). On the issues: David Valadao and Rudy Salas on immigration, abortion and agriculture. https://www.latimes.com/politics/story/2022-10-25/2022-california-midterm-election-david-valadao-rudy-salas-on-immigration-abortion-agriculture
+
+Gannon, M. (2022, October 3). Valadao and Salas draw stark contrast on abortion debate just ahead of midterm election. *KGET.* https://www.kget.com/news/politics/your-local-elections/valadao-and-salas-draw-stark-contrast-on-abortion-debate-just-ahead-of-midterm-election/
+
+Hall, A. B. (2015). What happens when extremists win primaries? *American Political Science Review, 109*(1), 18–42.
+
+In California, the Republicans are likely to gain at least one seat. (2022, November 8). *Economist.* https://www.economist.com/interactive/us-midterms-2022/forecast/house/california#22
+
+Knowles, H. (2022, October 29). He broke ranks to impeach Trump. On the trail, Valadao steers clear of it. *Wasington Post.* https://www.washingtonpost.com/elections/2022/10/31/david-valadao-trump-impeachment-reelection/
+
+Lewis, J.B., DeVine, B., Pitcher, L., &  Martis, K.C. (2020). Digital Boundary Definitions of United States Congressional Districts (Version 1.5) [Data file]. https://cdmaps.polisci.ucla.edu
+
+Linskey, A. (2022, September 12). Democrats spend tens of millions amplifying far-right
+candidates in nine states. *Washington Post.* https://www.washingtonpost.com/politics/2022/09/12/democrats-interfere-republican-primaries/
+
+Marans, D. (2022, June 4). Why A Democratic Super PAC Is Promoting A Pro-Trump Election Denier In California. *HuffPost.* https://www.huffpost.com/entry/democratic-super-pac-california-congressional-race_n_629a9b25e4b0c184bdd1384d
+
+Mehta, S., & Vega, P. (2022, September 21). Will California decide control of Congress? These are 10 races to watch. *Los Angeles Times.* https://www.latimes.com/politics/story/2022-09-21/2022-california-election-congressional-races-to-watch#6
+
+Salas, R. (2022a). Meet Rudy. https://www.rudysalas.com/meet-rudy
+
+Salas, R. (2022b). Priorities. https://www.rudysalas.com/priorities
+
+The Cook Political Report. (n.d.). PVI Map and District List. https://www.cookpolitical.com/pvi-map-and-district-list
+
+The Cook Political Report. (2022). 2022 Cook PVI℠: District Map and List. https://www.cookpolitical.com/cook-pvi/2022-partisan-voting-index/district-map-and-list
+
+Vakil, C., Manchester, J., & Greenwood, M. (2022, October 20). Campaign Report — Trump’s lasting impact on the GOP. *The Hill.* https://thehill.com/homenews/campaign/3697452-campaign-report-trumps-lasting-impact-on-the-gop/
+
+Valadao, D. (2022a). MEET DAVID. https://valadaoforcongress.com/about-david/
+
+Valadao, D. (2022b). DAVID VALADAO ON THE ISSUES. https://valadaoforcongress.com/issues/
+
+Valadao, D. (2022c). ENERGY. https://valadaoforcongress.com/energy/
+
+Valadao is slightly favored to win California's 22nd District. (2022, November 8). *FiveThirtyEight.* https://projects.fivethirtyeight.com/2022-election-forecast/house/california/22/
+
+Vavreck, L. (2009). *The message matters: the economy and presidential campaigns.* Princeton University Press.
+
+Wesleyan Media Project. (2022, November 3). 4.3M TV ADS WITH SPENDING NEARING $3B. http://mediaproject.wesleyan.edu/releases-110322/
+
+White, B. (2022, September 18). Abortion ruling has put these 5 California Hosue races in play. *Politico.* https://www.kget.com/news/politics/your-local-elections/valadao-and-salas-draw-stark-contrast-on-abortion-debate-just-ahead-of-midterm-election/
